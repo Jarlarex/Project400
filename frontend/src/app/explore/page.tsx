@@ -42,6 +42,13 @@ function ExploreContent() {
             console.log("Fetched listing", id.toString(), listing);
             
             if (listing) {
+              // Skip listings with invalid metadata URIs (e.g., test data)
+              const cid = listing.metadataURI?.replace("ipfs://", "");
+              if (!cid || cid.length < 20 || (!cid.startsWith("Qm") && !cid.startsWith("baf"))) {
+                console.warn("Skipping listing with invalid CID:", id.toString(), listing.metadataURI);
+                return null;
+              }
+
               let metadata = null;
               try {
                 metadata = await fetchMetadataFromIPFS(listing.metadataURI);

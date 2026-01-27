@@ -27,6 +27,13 @@ export default function ProfilePage() {
         const listingPromises = ids.map(async (id) => {
           const listing = await getListing(id);
           if (listing) {
+            // Skip listings with invalid metadata URIs (e.g., test data)
+            const cid = listing.metadataURI?.replace("ipfs://", "");
+            if (!cid || cid.length < 20 || (!cid.startsWith("Qm") && !cid.startsWith("baf"))) {
+              console.warn("Skipping listing with invalid CID:", id.toString(), listing.metadataURI);
+              return null;
+            }
+
             const metadata = await fetchMetadataFromIPFS(listing.metadataURI);
             return { ...listing, metadata };
           }
