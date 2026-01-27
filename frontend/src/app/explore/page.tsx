@@ -23,8 +23,14 @@ function ExploreContent() {
 
   useEffect(() => {
     const fetchListings = async () => {
+      console.log("=== EXPLORE PAGE: Starting fetch ===");
+      console.log("Marketplace contract:", marketplace?.target || "NULL");
+      console.log("Is connected:", isConnected);
+      console.log("User address:", address);
+      
       if (!marketplace) {
         // Marketplace contract not initialized yet (wallet not connected)
+        console.log("No marketplace contract - skipping fetch");
         setIsLoading(false);
         setListings([]);
         return;
@@ -32,9 +38,9 @@ function ExploreContent() {
 
       setIsLoading(true);
       try {
-        console.log("Fetching active listings...");
+        console.log("Fetching active listings from contract:", marketplace.target);
         const ids = await getActiveListings();
-        console.log("Active listing IDs:", ids);
+        console.log("Active listing IDs:", ids, "Count:", ids.length);
 
         const listingPromises = ids.map(async (id) => {
           try {

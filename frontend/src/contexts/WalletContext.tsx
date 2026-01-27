@@ -113,6 +113,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
       setBalance((Number(balanceWei) / 1e18).toFixed(4));
 
       // Initialize marketplace contract
+      console.log("Initializing marketplace contract...");
+      console.log("Contract address:", MarketplaceABI.address);
+      console.log("Chain ID:", Number(network.chainId));
+      console.log("Expected chain ID:", MarketplaceABI.chainId);
+      
       if (MarketplaceABI.address && MarketplaceABI.abi) {
         const marketplaceContract = new Contract(
           MarketplaceABI.address,
@@ -120,6 +125,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
           newSigner
         );
         setMarketplace(marketplaceContract);
+        console.log("Marketplace contract initialized successfully");
+      } else {
+        console.error("Missing contract address or ABI");
       }
     }
   };
