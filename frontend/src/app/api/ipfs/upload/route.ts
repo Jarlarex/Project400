@@ -1,44 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import pinataSDK from "@pinata/sdk";
-import { Readable } from "stream";
+import { PinataSDK } from "pinata";
 
-// Initialize Pinata with API Key + Secret
-// The classic @pinata/sdk does NOT support JWT - it requires API Key + Secret
-const pinataApiKey = process.env.PINATA_API_KEY;
-const pinataSecret = process.env.PINATA_SECRET_API_KEY || process.env.PINATA_SECRET;
-
-let pinata: any;
-
-if (pinataApiKey && pinataSecret) {
-  console.log("🔑 Initializing Pinata with API Key + Secret");
-  pinata = new pinataSDK(pinataApiKey, pinataSecret);
-} else {
-  console.error("❌ No Pinata credentials found! Need PINATA_API_KEY and PINATA_SECRET");
-  console.error("Classic @pinata/sdk does NOT support JWT - use API Key + Secret instead");
-}
+// Initialize Pinata v2 SDK with JWT
+// v2 SDK supports JWT authentication
+const pinata = new PinataSDK({
+  pinataJwt: process.env.PINATA_JWT || "",
+});
 
 export async function POST(request: NextRequest) {
   // 🕵️ DEBUG: Check which env vars are present
   console.log("=== PINATA ENV VAR CHECK ===");
   console.log("PINATA_JWT present?", Boolean(process.env.PINATA_JWT));
-  console.log("PINATA_API_KEY present?", Boolean(process.env.PINATA_API_KEY));
-  console.log("PINATA_SECRET_API_KEY present?", Boolean(process.env.PINATA_SECRET_API_KEY));
-  console.log("PINATA_SECRET present?", Boolean(process.env.PINATA_SECRET));
-  console.log("PINATA_GATEWAY present?", Boolean(process.env.PINATA_GATEWAY));
   if (process.env.PINATA_JWT) {
     console.log("PINATA_JWT first 10 chars:", process.env.PINATA_JWT.substring(0, 10) + "...");
   }
-  if (process.env.PINATA_API_KEY) {
-    console.log("PINATA_API_KEY first 10 chars:", process.env.PINATA_API_KEY.substring(0, 10) + "...");
-  }
-  console.log("Pinata SDK initialized?", Boolean(pinata));
   console.log("===========================");
   
-  if (!pinata) {
+  if (!process.env.PINATA_JWT) {
     return NextResponse.json(
       {
         error: "Pinata not configured",
-        message: "Missing PINATA_JWT or (PINATA_API_KEY + PINATA_SECRET_API_KEY) in environment variables",
+        message: "Missing PINATA_JWT in environment variables",
       },
       { status: 500 }
     );
@@ -57,18 +39,8 @@ export async function POST(request: NextRequest) {
 
       console.log("Uploading file to Pinata:", file.name, file.type, file.size);
       
-      // Convert File to Buffer and then to Readable stream for @pinata/sdk
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const stream = Readable.from(buffer);
-      
-      const options = {
-        pinataMetadata: {
-          name: file.name,
-        },
-      };
-      
-      const result = await pinata.pinFileToIPFS(stream, options);
+      // Pinata v2 SDK accepts File objects directly
+      const result = await pinata.upload.file(file);
       console.log("File uploaded successfully, CID:", result.IpfsHash);
       
       return NextResponse.json({ cid: result.IpfsHash });
@@ -82,13 +54,7 @@ export async function POST(request: NextRequest) {
       const metadata = JSON.parse(jsonData);
       console.log("Uploading JSON metadata to Pinata");
       
-      const options = {
-        pinataMetadata: {
-          name: metadata.name || "marketplace-metadata",
-        },
-      };
-      
-      const result = await pinata.pinJSONToIPFS(metadata, options);
+      const result = await pinata.upload.json(metadata);
       console.log("Metadata uploaded successfully, CID:", result.IpfsHash);
       
       return NextResponse.json({ cid: result.IpfsHash });
