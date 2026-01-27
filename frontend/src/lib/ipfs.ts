@@ -1,6 +1,16 @@
 // Note: Pinata SDK is now only used server-side in API routes
 // Client-side uploads go through /api/ipfs/upload for security
 
+/**
+ * Public IPFS gateways (in order of preference)
+ */
+const IPFS_GATEWAYS = [
+  "https://ipfs.io/ipfs/",
+  "https://dweb.link/ipfs/",
+  "https://gateway.pinata.cloud/ipfs/",
+  "https://cloudflare-ipfs.com/ipfs/",
+];
+
 export interface ItemMetadata {
   name: string;
   description: string;
@@ -66,7 +76,31 @@ export async function uploadMetadataToIPFS(metadata: ItemMetadata): Promise<stri
 }
 
 /**
- * Get the IPFS gateway URL for a CID
+ * Validate if a string is a valid IPFS CID
+ */
+export function isValidCID(cid: string): boolean {
+  if (!cid || cid.length < 20) return false;
+  
+  // CIDv0 starts with "Qm" and is 46 characters
+  if (cid.startsWith("Qm") && cid.length === 46) return true;
+  
+  // CIDv1 starts with "baf" (base32) or "b" (multibase)
+  if (cid.startsWith("baf") || cid.startsWith("bafy") || cid.startsWith("bafk")) return true;
+  
+  return false;
+}
+
+/**
+ * Convert ipfs:// URI to multiple HTTP gateway URLs (fallback support)
+ */
+export function ipfsToHttpUrls(ipfsUri: string): string[] {
+  if (!ipfsUri?.startsWith("ipfs://")) return [ipfsUri];
+  const cid = ipfsUri.replace("ipfs://", "");
+  return IPFS_GATEWAYS.map(gw => `${gw}${cid}`);
+}
+
+/**
+ * Get the first IPFS gateway URL for a CID (for backward compatibility)
  */
 export function getIPFSUrl(cid: string): string {
   if (!cid) return "";
@@ -76,8 +110,8 @@ export function getIPFSUrl(cid: string): string {
     cid = cid.replace("ipfs://", "");
   }
   
-  // Use Cloudflare's IPFS gateway (best SSL compatibility on Windows)
-  return `https://cloudflare-ipfs.com/ipfs/${cid}`;
+  // Use first gateway (ipfs.io)
+  return `${IPFS_GATEWAYS[0]}${cid}`;
 }
 
 /**
@@ -91,27 +125,19 @@ export async function fetchMetadataFromIPFS(uri: string): Promise<ItemMetadata |
     // Extract CID (basic)
     const cid = raw.startsWith("ipfs://") ? raw.slice("ipfs://".length) : raw;
 
-    // Reject obvious non-CIDs (e.g., "test123" case)
-    // Simple heuristic: real CIDs are much longer
-    if (cid.length < 20) {
-      console.warn("Invalid CID/uri for metadata:", uri);
+    // Validate CID format (real CIDs are 46+ chars for v0, or start with specific prefixes)
+    if (cid.length < 20 || (!cid.startsWith("Qm") && !cid.startsWith("baf"))) {
+      console.warn("Invalid CID format for metadata:", uri);
       return null;
     }
 
-    const gateways = [
-      `https://cloudflare-ipfs.com/ipfs/${cid}`,
-      `https://dweb.link/ipfs/${cid}`,
-      `https://ipfs.io/ipfs/${cid}`,
-      // Keep Pinata last (since it may have SSL issues)
-      `https://gateway.pinata.cloud/ipfs/${cid}`,
-    ];
-
+    const gatewayUrls = IPFS_GATEWAYS.map(gw => `${gw}${cid}`);
     let lastError: unknown = null;
 
-    for (const url of gateways) {
+    for (const url of gatewayUrls) {
       try {
         const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status} at ${url}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
       } catch (e) {
         lastError = e;

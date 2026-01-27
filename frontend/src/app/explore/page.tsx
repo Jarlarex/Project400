@@ -24,8 +24,9 @@ function ExploreContent() {
   useEffect(() => {
     const fetchListings = async () => {
       if (!marketplace) {
-        console.log("Marketplace not ready yet");
+        // Marketplace contract not initialized yet (wallet not connected)
         setIsLoading(false);
+        setListings([]);
         return;
       }
 
