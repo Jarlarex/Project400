@@ -19,6 +19,7 @@ contract Marketplace is IMarketplace, ReentrancyGuard, Ownable {
     uint256 public constant MIN_AUCTION_DURATION = 1 hours;
     uint256 public constant MAX_AUCTION_DURATION = 30 days;
     uint256 public constant MIN_BID_INCREMENT_PERCENT = 5; // 5% minimum bid increment
+    uint256 public constant ESCROW_PERIOD = 14 days; // 14 days for buyer to confirm delivery
 
     // Mappings
     mapping(uint256 => Listing) private _listings;
@@ -79,7 +80,9 @@ contract Marketplace is IMarketplace, ReentrancyGuard, Ownable {
             createdAt: block.timestamp,
             endTime: endTime,
             highestBidder: address(0),
-            highestBid: 0
+            highestBid: 0,
+            buyer: address(0),
+            escrowDeadline: 0
         });
 
         _userListings[msg.sender].push(listingId);
@@ -127,6 +130,86 @@ contract Marketplace is IMarketplace, ReentrancyGuard, Ownable {
         }
 
         emit ItemPurchased(listingId, msg.sender, listing.seller, listing.price);
+    }
+
+    /**
+     * @notice Initiate a purchase with escrow (funds held until delivery confirmed)
+     * @param listingId The ID of the listing to purchase
+     */
+    function initiatePurchase(uint256 listingId) external payable override nonReentrant {
+        Listing storage listing = _listings[listingId];
+
+        require(listing.status == ListingStatus.Active, "Listing not active");
+        require(listing.listingType == ListingType.FixedPrice, "Not a fixed price listing");
+        require(msg.sender != listing.seller, "Cannot buy own listing");
+        require(msg.value >= listing.price, "Insufficient payment");
+
+        // Update listing status to InEscrow
+        listing.status = ListingStatus.InEscrow;
+        listing.buyer = msg.sender;
+        listing.escrowDeadline = block.timestamp + ESCROW_PERIOD;
+        _removeFromActiveListings(listingId);
+
+        // Refund excess payment
+        if (msg.value > listing.price) {
+            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - listing.price}("");
+            require(refundSuccess, "Refund failed");
+        }
+
+        emit PurchaseInitiated(
+            listingId,
+            msg.sender,
+            listing.seller,
+            listing.price,
+            listing.escrowDeadline
+        );
+    }
+
+    /**
+     * @notice Buyer confirms delivery and releases funds from escrow
+     * @param listingId The ID of the listing
+     */
+    function confirmDelivery(uint256 listingId) external override nonReentrant {
+        Listing storage listing = _listings[listingId];
+
+        require(listing.status == ListingStatus.InEscrow, "Not in escrow");
+        require(msg.sender == listing.buyer, "Only buyer can confirm");
+
+        listing.status = ListingStatus.Sold;
+
+        // Calculate fees
+        uint256 fee = (listing.price * platformFee) / 10000;
+        uint256 sellerAmount = listing.price - fee;
+
+        // Transfer funds to seller
+        (bool success, ) = payable(listing.seller).call{value: sellerAmount}("");
+        require(success, "Transfer to seller failed");
+
+        emit DeliveryConfirmed(listingId, listing.buyer, listing.seller, listing.price);
+    }
+
+    /**
+     * @notice Seller releases funds from escrow after deadline passes
+     * @param listingId The ID of the listing
+     */
+    function releaseEscrow(uint256 listingId) external override nonReentrant {
+        Listing storage listing = _listings[listingId];
+
+        require(listing.status == ListingStatus.InEscrow, "Not in escrow");
+        require(msg.sender == listing.seller, "Only seller can release");
+        require(block.timestamp >= listing.escrowDeadline, "Escrow period not ended");
+
+        listing.status = ListingStatus.Sold;
+
+        // Calculate fees
+        uint256 fee = (listing.price * platformFee) / 10000;
+        uint256 sellerAmount = listing.price - fee;
+
+        // Transfer funds to seller
+        (bool success, ) = payable(listing.seller).call{value: sellerAmount}("");
+        require(success, "Transfer to seller failed");
+
+        emit EscrowReleased(listingId, listing.seller, listing.price);
     }
 
     /**

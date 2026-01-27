@@ -10,7 +10,8 @@ interface IMarketplace {
     enum ListingStatus {
         Active,
         Sold,
-        Cancelled
+        Cancelled,
+        InEscrow
     }
 
     /// @notice Listing type enum
@@ -31,6 +32,8 @@ interface IMarketplace {
         uint256 endTime; // For auctions
         address highestBidder;
         uint256 highestBid;
+        address buyer; // Address of buyer in escrow
+        uint256 escrowDeadline; // Deadline for confirming delivery
     }
 
     /// @notice Emitted when a new listing is created
@@ -71,6 +74,30 @@ interface IMarketplace {
     /// @notice Emitted when platform fee is updated
     event PlatformFeeUpdated(uint256 oldFee, uint256 newFee);
 
+    /// @notice Emitted when a purchase is initiated (funds in escrow)
+    event PurchaseInitiated(
+        uint256 indexed listingId,
+        address indexed buyer,
+        address indexed seller,
+        uint256 price,
+        uint256 escrowDeadline
+    );
+
+    /// @notice Emitted when delivery is confirmed (funds released)
+    event DeliveryConfirmed(
+        uint256 indexed listingId,
+        address indexed buyer,
+        address indexed seller,
+        uint256 price
+    );
+
+    /// @notice Emitted when escrow funds are released (by seller after deadline)
+    event EscrowReleased(
+        uint256 indexed listingId,
+        address indexed seller,
+        uint256 price
+    );
+
     // Core functions
     function createListing(
         string memory metadataURI,
@@ -80,6 +107,12 @@ interface IMarketplace {
     ) external returns (uint256);
 
     function buyItem(uint256 listingId) external payable;
+
+    function initiatePurchase(uint256 listingId) external payable;
+
+    function confirmDelivery(uint256 listingId) external;
+
+    function releaseEscrow(uint256 listingId) external;
 
     function placeBid(uint256 listingId) external payable;
 
