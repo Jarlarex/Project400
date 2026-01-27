@@ -366,11 +366,11 @@ export default function ListingDetailPage() {
                   <div className="relative">
                     <input
                       type="number"
-                      step="0.001"
+                      step="any"
                       min={minBid}
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
-                      placeholder={`Min: ${minBid.toFixed(4)} ETH`}
+                      placeholder={`Min: ${minBid.toFixed(6)} ETH`}
                       className="input pr-16"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] font-medium">

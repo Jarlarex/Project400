@@ -304,11 +304,11 @@ export default function CreateListingPage() {
             <div className="relative">
               <input
                 type="number"
-                step="0.001"
-                min="0"
+                step="any"
+                min="0.000000000000000001"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="0.00"
+                placeholder="0.00001"
                 className="input pr-16"
                 required
               />
