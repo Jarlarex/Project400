@@ -69,6 +69,9 @@ function ExploreContent() {
         );
 
         console.log("Total fetched listings:", fetchedListings.length);
+        fetchedListings.forEach(l => {
+          console.log(`Listing ${l.id}: Type=${l.listingType} (FixedPrice=0, Auction=1), Status=${l.status}`);
+        });
         setListings(fetchedListings);
       } catch (error) {
         console.error("Error fetching listings:", error);

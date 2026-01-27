@@ -299,13 +299,15 @@ export function useMarketplace() {
           seller: result[1],
           metadataURI: result[2],
           price: result[3],
-          listingType: result[4],
-          status: result[5],
+          listingType: Number(result[4]), // Convert to number for enum comparison
+          status: Number(result[5]), // Convert to number for enum comparison
           createdAt: result[6],
           endTime: result[7],
           highestBidder: result[8],
           highestBid: result[9],
         };
+        
+        console.log("Parsed listing:", listingId.toString(), "Type:", listing.listingType, "Status:", listing.status);
         
         return listing;
       } catch (err) {

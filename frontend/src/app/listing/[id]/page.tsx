@@ -12,7 +12,7 @@ import {
   formatPrice,
   getTimeRemaining,
 } from "@/hooks/useMarketplace";
-import { fetchMetadataFromIPFS } from "@/lib/ipfs";
+import { fetchMetadataFromIPFS, isValidCID } from "@/lib/ipfs";
 import { IpfsImage } from "@/components/IpfsImage";
 
 export default function ListingDetailPage() {
@@ -43,10 +43,31 @@ export default function ListingDetailPage() {
     const fetchListing = async () => {
       setIsPageLoading(true);
       try {
+        console.log("Fetching listing with ID:", listingId);
         const data = await getListing(BigInt(listingId));
+        console.log("Fetched listing data:", data);
+        
         if (data) {
-          const metadata = await fetchMetadataFromIPFS(data.metadataURI);
+          // Validate CID before attempting to fetch metadata
+          const cid = data.metadataURI.startsWith("ipfs://")
+            ? data.metadataURI.replace("ipfs://", "")
+            : data.metadataURI;
+
+          let metadata = null;
+          if (isValidCID(cid)) {
+            try {
+              metadata = await fetchMetadataFromIPFS(data.metadataURI);
+              console.log("Fetched metadata:", metadata);
+            } catch (metaError) {
+              console.error("Failed to fetch metadata for listing", listingId, metaError);
+            }
+          } else {
+            console.warn("Invalid CID for listing:", listingId, data.metadataURI);
+          }
+          
           setListing({ ...data, metadata });
+        } else {
+          console.error("No listing data returned for ID:", listingId);
         }
       } catch (err) {
         console.error("Error fetching listing:", err);
