@@ -1,10 +1,5 @@
-import { PinataSDK } from "pinata";
-
-// Initialize Pinata client
-const pinata = new PinataSDK({
-  pinataJwt: process.env.NEXT_PUBLIC_PINATA_JWT || "",
-  pinataGateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud",
-});
+// Note: Pinata SDK is now only used server-side in API routes
+// Client-side uploads go through /api/ipfs/upload for security
 
 export interface ItemMetadata {
   name: string;
@@ -19,12 +14,25 @@ export interface ItemMetadata {
 }
 
 /**
- * Upload a file to IPFS via Pinata
+ * Upload a file to IPFS via server-side API route
  */
 export async function uploadFileToIPFS(file: File): Promise<string> {
   try {
-    const result = await pinata.upload.public.file(file);
-    return result.cid;
+    const formData = new FormData();
+    formData.append("type", "file");
+    formData.append("file", file);
+
+    const response = await fetch("/api/ipfs/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.cid;
   } catch (error) {
     console.error("Error uploading file to IPFS:", error);
     throw new Error("Failed to upload file to IPFS");
@@ -32,12 +40,25 @@ export async function uploadFileToIPFS(file: File): Promise<string> {
 }
 
 /**
- * Upload JSON metadata to IPFS via Pinata
+ * Upload JSON metadata to IPFS via server-side API route
  */
 export async function uploadMetadataToIPFS(metadata: ItemMetadata): Promise<string> {
   try {
-    const result = await pinata.upload.public.json(metadata);
-    return result.cid;
+    const formData = new FormData();
+    formData.append("type", "json");
+    formData.append("data", JSON.stringify(metadata));
+
+    const response = await fetch("/api/ipfs/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.cid;
   } catch (error) {
     console.error("Error uploading metadata to IPFS:", error);
     throw new Error("Failed to upload metadata to IPFS");

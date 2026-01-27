@@ -92,9 +92,9 @@ PRIVATE_KEY=abcdef123456789...
 
 ---
 
-### 5. NEXT_PUBLIC_PINATA_JWT - Pinata JWT Token
+### 5. PINATA_JWT - Pinata JWT Token (Server-Side Only)
 
-**What it's for:** Authenticates frontend IPFS uploads (newer, recommended method).
+**What it's for:** Authenticates server-side IPFS uploads securely (never exposed to browser).
 
 **How to get it:**
 
@@ -136,12 +136,14 @@ PINATA_SECRET_KEY=your_pinata_secret_key
 Create a `frontend/.env.local` file:
 
 ```env
-# Pinata JWT for IPFS uploads (recommended)
-NEXT_PUBLIC_PINATA_JWT=your_pinata_jwt_token
+# Pinata JWT for server-side IPFS uploads (NOT exposed to browser)
+PINATA_JWT=your_pinata_jwt_token
 
-# Pinata Gateway (usually this default)
-NEXT_PUBLIC_PINATA_GATEWAY=gateway.pinata.cloud
+# Pinata Gateway (optional, for direct gateway access)
+PINATA_GATEWAY=gateway.pinata.cloud
 ```
+
+**Security Note:** The `PINATA_JWT` does NOT have the `NEXT_PUBLIC_` prefix, which means it's only available server-side. This prevents your API key from being exposed to users in the browser.
 
 ---
 
