@@ -2,21 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import pinataSDK from "@pinata/sdk";
 import { Readable } from "stream";
 
-// Initialize Pinata with server-side JWT or API Key + Secret
-// Supports both authentication methods
-let pinata: any;
-
-// Support both PINATA_SECRET and PINATA_SECRET_API_KEY
+// Initialize Pinata with API Key + Secret
+// The classic @pinata/sdk does NOT support JWT - it requires API Key + Secret
+const pinataApiKey = process.env.PINATA_API_KEY;
 const pinataSecret = process.env.PINATA_SECRET_API_KEY || process.env.PINATA_SECRET;
 
-if (process.env.PINATA_JWT) {
-  console.log("🔑 Initializing Pinata with JWT");
-  pinata = new pinataSDK({ pinataJWTKey: process.env.PINATA_JWT });
-} else if (process.env.PINATA_API_KEY && pinataSecret) {
+let pinata: any;
+
+if (pinataApiKey && pinataSecret) {
   console.log("🔑 Initializing Pinata with API Key + Secret");
-  pinata = new pinataSDK(process.env.PINATA_API_KEY, pinataSecret);
+  pinata = new pinataSDK(pinataApiKey, pinataSecret);
 } else {
-  console.error("❌ No Pinata credentials found! Need either PINATA_JWT or (PINATA_API_KEY + PINATA_SECRET)");
+  console.error("❌ No Pinata credentials found! Need PINATA_API_KEY and PINATA_SECRET");
+  console.error("Classic @pinata/sdk does NOT support JWT - use API Key + Secret instead");
 }
 
 export async function POST(request: NextRequest) {
