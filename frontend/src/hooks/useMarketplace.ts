@@ -14,6 +14,7 @@ export enum ListingStatus {
   Active = 0,
   Sold = 1,
   Cancelled = 2,
+  InEscrow = 3,
 }
 
 export interface Listing {
@@ -27,6 +28,8 @@ export interface Listing {
   endTime: bigint;
   highestBidder: string;
   highestBid: bigint;
+  buyer: string;
+  escrowDeadline: bigint;
 }
 
 export interface ListingWithMetadata extends Listing {
@@ -143,7 +146,7 @@ export function useMarketplace() {
   );
 
   /**
-   * Buy a fixed price item
+   * Buy a fixed price item (instant, no escrow)
    */
   const buyItem = useCallback(
     async (listingId: bigint, price: bigint): Promise<boolean> => {
@@ -161,6 +164,90 @@ export function useMarketplace() {
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to buy item";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [marketplace, isConnected]
+  );
+
+  /**
+   * Initiate a purchase with escrow (funds held until confirmed)
+   */
+  const initiatePurchase = useCallback(
+    async (listingId: bigint, price: bigint): Promise<boolean> => {
+      if (!marketplace || !isConnected) {
+        setError("Wallet not connected");
+        return false;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const tx = await marketplace.initiatePurchase(listingId, { value: price });
+        await tx.wait();
+        return true;
+      } catch (err: any) {
+        const message = err.reason || err.message || "Failed to initiate purchase";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [marketplace, isConnected]
+  );
+
+  /**
+   * Confirm delivery and release funds from escrow (buyer only)
+   */
+  const confirmDelivery = useCallback(
+    async (listingId: bigint): Promise<boolean> => {
+      if (!marketplace || !isConnected) {
+        setError("Wallet not connected");
+        return false;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const tx = await marketplace.confirmDelivery(listingId);
+        await tx.wait();
+        return true;
+      } catch (err: any) {
+        const message = err.reason || err.message || "Failed to confirm delivery";
+        setError(message);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [marketplace, isConnected]
+  );
+
+  /**
+   * Release funds from escrow after deadline (seller only)
+   */
+  const releaseEscrow = useCallback(
+    async (listingId: bigint): Promise<boolean> => {
+      if (!marketplace || !isConnected) {
+        setError("Wallet not connected");
+        return false;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const tx = await marketplace.releaseEscrow(listingId);
+        await tx.wait();
+        return true;
+      } catch (err: any) {
+        const message = err.reason || err.message || "Failed to release escrow";
         setError(message);
         return false;
       } finally {
@@ -305,6 +392,8 @@ export function useMarketplace() {
           endTime: result[7],
           highestBidder: result[8],
           highestBid: result[9],
+          buyer: result[10],
+          escrowDeadline: result[11],
         };
         
         console.log("Parsed listing:", listingId.toString(), "Type:", listing.listingType, "Status:", listing.status);
@@ -402,6 +491,9 @@ export function useMarketplace() {
     resetError,
     createListing,
     buyItem,
+    initiatePurchase,
+    confirmDelivery,
+    releaseEscrow,
     placeBid,
     endAuction,
     cancelListing,

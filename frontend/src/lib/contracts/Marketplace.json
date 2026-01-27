@@ -1,5 +1,5 @@
 {
-  "address": "0xbF648124933b5f344eb85Ef22AAaB97b489a5DF6",
+  "address": "0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b",
   "chainId": 11155111,
   "abi": [
     {
@@ -78,6 +78,55 @@
         {
           "type": "uint256",
           "name": "amount",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "DeliveryConfirmed",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "listingId",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "buyer",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "seller",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "price",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "EscrowReleased",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "listingId",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "seller",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "price",
           "indexed": false
         }
       ]
@@ -193,6 +242,52 @@
       ]
     },
     {
+      "type": "event",
+      "anonymous": false,
+      "name": "PurchaseInitiated",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "listingId",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "buyer",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "seller",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "price",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "escrowDeadline",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "ESCROW_PERIOD",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
       "type": "function",
       "name": "MAX_AUCTION_DURATION",
       "constant": true,
@@ -265,6 +360,19 @@
     {
       "type": "function",
       "name": "cancelListing",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "listingId"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "confirmDelivery",
       "constant": false,
       "payable": false,
       "inputs": [
@@ -388,6 +496,14 @@
             {
               "type": "uint256",
               "name": "highestBid"
+            },
+            {
+              "type": "address",
+              "name": "buyer"
+            },
+            {
+              "type": "uint256",
+              "name": "escrowDeadline"
             }
           ]
         }
@@ -465,6 +581,20 @@
     },
     {
       "type": "function",
+      "name": "initiatePurchase",
+      "constant": false,
+      "stateMutability": "payable",
+      "payable": true,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "listingId"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
       "name": "owner",
       "constant": true,
       "stateMutability": "view",
@@ -504,6 +634,19 @@
           "name": ""
         }
       ]
+    },
+    {
+      "type": "function",
+      "name": "releaseEscrow",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "listingId"
+        }
+      ],
+      "outputs": []
     },
     {
       "type": "function",
