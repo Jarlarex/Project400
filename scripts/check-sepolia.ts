@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const contractAddress = "0x8955804629C8C891d4E69e2a058c4D878B1b182b";
+  const contractAddress = "0xbF648124933b5f344eb85Ef22AAaB97b489a5DF6";
   
   const Marketplace = await ethers.getContractFactory("Marketplace");
   const marketplace = Marketplace.attach(contractAddress);

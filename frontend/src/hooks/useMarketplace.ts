@@ -59,12 +59,18 @@ export function useMarketplace() {
       setError(null);
 
       try {
-        console.log("Marketplace contract address:", await marketplace.getAddress());
+        const contractAddress = await marketplace.getAddress();
+        console.log("Marketplace contract address:", contractAddress);
         console.log("Creating listing with params:", { metadataURI, price, isAuction, durationInSeconds });
+        
+        // Check network
+        const network = await marketplace.runner?.provider?.getNetwork();
+        console.log("Connected to network:", network?.chainId.toString(), network?.name);
         
         const priceWei = parseEther(price);
         
         // Get total listings BEFORE transaction
+        console.log("Calling getTotalListings...");
         const totalListingsBefore = await marketplace.getTotalListings();
         console.log("Total listings before:", totalListingsBefore.toString());
         
@@ -395,7 +401,8 @@ export function useMarketplace() {
 /**
  * Format ETH price for display
  */
-export function formatPrice(priceWei: bigint): string {
+export function formatPrice(priceWei: bigint | null | undefined): string {
+  if (!priceWei) return "0";
   return formatEther(priceWei);
 }
 

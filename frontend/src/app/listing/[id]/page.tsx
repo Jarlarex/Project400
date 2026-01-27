@@ -132,7 +132,10 @@ export default function ListingDetailPage() {
     }
   };
 
-  const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const shortenAddress = (addr?: string) => {
+    if (!addr) return "Unknown";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   if (isPageLoading) {
     return (
@@ -170,15 +173,15 @@ export default function ListingDetailPage() {
 
   const isAuction = listing.listingType === ListingType.Auction;
   const isActive = listing.status === ListingStatus.Active;
-  const isSeller = address?.toLowerCase() === listing.seller.toLowerCase();
+  const isSeller = address?.toLowerCase() === listing.seller?.toLowerCase();
   const canBuy = isConnected && !isSeller && isActive && !isAuction;
   const canBid = isConnected && !isSeller && isActive && isAuction && !timeRemaining.isEnded;
   const canEndAuction = isAuction && isActive && timeRemaining.isEnded;
   const canCancel = isSeller && isActive && (!isAuction || listing.highestBidder === "0x0000000000000000000000000000000000000000");
 
-  const minBid = listing.highestBid > 0
+  const minBid = listing.highestBid && listing.highestBid > 0
     ? Number(formatPrice(listing.highestBid)) * 1.05
-    : Number(formatPrice(listing.price));
+    : Number(formatPrice(listing.price || BigInt(0)));
 
   const imageUrl = listing.metadata?.image ? getIPFSUrl(listing.metadata.image) : null;
 
@@ -234,7 +237,7 @@ export default function ListingDetailPage() {
           {/* Details */}
           <div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              {listing.metadata?.name || `Item #${listing.id.toString()}`}
+              {listing.metadata?.name || `Item #${listing.id?.toString() ?? 'Unknown'}`}
             </h1>
 
             <p className="text-[var(--text-secondary)] mb-6">
@@ -312,7 +315,7 @@ export default function ListingDetailPage() {
                     <svg className="w-6 h-6 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 1.75l-6.25 10.5L12 16l6.25-3.75L12 1.75zM5.75 13.5L12 22.25l6.25-8.75L12 17.25 5.75 13.5z" />
                     </svg>
-                    {formatPrice(isAuction && listing.highestBid > 0 ? listing.highestBid : listing.price)}
+                    {formatPrice(isAuction && listing.highestBid && listing.highestBid > 0 ? listing.highestBid : listing.price)}
                   </p>
                 </div>
 
