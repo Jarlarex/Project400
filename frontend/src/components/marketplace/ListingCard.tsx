@@ -11,7 +11,7 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
-  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining(listing.endTime));
+  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining(listing.endTime || BigInt(0)));
 
   // Update countdown timer for auctions
   useEffect(() => {
@@ -20,7 +20,7 @@ export function ListingCard({ listing }: ListingCardProps) {
     }
 
     const interval = setInterval(() => {
-      setTimeRemaining(getTimeRemaining(listing.endTime));
+      setTimeRemaining(getTimeRemaining(listing.endTime || BigInt(0)));
     }, 1000);
 
     return () => clearInterval(interval);
@@ -29,12 +29,15 @@ export function ListingCard({ listing }: ListingCardProps) {
   const imageUrl = listing.metadata?.image ? getIPFSUrl(listing.metadata.image) : "/placeholder.png";
   const isAuction = listing.listingType === ListingType.Auction;
   const isActive = listing.status === ListingStatus.Active;
-  const displayPrice = isAuction && listing.highestBid > 0 ? listing.highestBid : listing.price;
+  const displayPrice = isAuction && listing.highestBid && listing.highestBid > 0 ? listing.highestBid : listing.price || BigInt(0);
 
-  const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const shortenAddress = (addr?: string) => {
+    if (!addr) return "Unknown";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   return (
-    <Link href={`/listing/${listing.id.toString()}`}>
+    <Link href={`/listing/${listing.id?.toString() ?? '0'}`}>
       <div className="card overflow-hidden group cursor-pointer">
         {/* Image */}
         <div className="relative aspect-square bg-[var(--bg-tertiary)] overflow-hidden">
@@ -79,7 +82,7 @@ export function ListingCard({ listing }: ListingCardProps) {
         {/* Content */}
         <div className="p-4">
           <h3 className="font-semibold text-lg mb-1 truncate group-hover:text-[var(--accent-primary)] transition-colors">
-            {listing.metadata?.name || `Item #${listing.id.toString()}`}
+            {listing.metadata?.name || `Item #${listing.id?.toString() ?? 'Unknown'}`}
           </h3>
           
           <p className="text-sm text-[var(--text-muted)] mb-3 truncate">
@@ -89,7 +92,7 @@ export function ListingCard({ listing }: ListingCardProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-[var(--text-muted)] mb-1">
-                {isAuction && listing.highestBid > 0 ? "Current Bid" : isAuction ? "Starting Price" : "Price"}
+                {isAuction && listing.highestBid && listing.highestBid > 0 ? "Current Bid" : isAuction ? "Starting Price" : "Price"}
               </p>
               <p className="eth-icon font-semibold text-lg">
                 <svg className="w-4 h-4 inline mr-1" viewBox="0 0 24 24" fill="currentColor">
@@ -99,11 +102,11 @@ export function ListingCard({ listing }: ListingCardProps) {
               </p>
             </div>
 
-            {isAuction && listing.highestBid > 0 && (
+            {isAuction && listing.highestBid && listing.highestBid > 0 && (
               <div className="text-right">
                 <p className="text-xs text-[var(--text-muted)] mb-1">Bids</p>
                 <p className="text-sm font-medium text-[var(--accent-secondary)]">
-                  {listing.highestBidder !== "0x0000000000000000000000000000000000000000" ? "1+" : "0"}
+                  {listing.highestBidder && listing.highestBidder !== "0x0000000000000000000000000000000000000000" ? "1+" : "0"}
                 </p>
               </div>
             )}

@@ -409,13 +409,17 @@ export function formatPrice(priceWei: bigint | null | undefined): string {
 /**
  * Calculate time remaining for auction
  */
-export function getTimeRemaining(endTime: bigint): {
+export function getTimeRemaining(endTime: bigint | null | undefined): {
   days: number;
   hours: number;
   minutes: number;
   seconds: number;
   isEnded: boolean;
 } {
+  if (!endTime) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isEnded: true };
+  }
+
   const now = Math.floor(Date.now() / 1000);
   const end = Number(endTime);
   const diff = end - now;
