@@ -50,12 +50,15 @@ export default function ProfilePage() {
     }
   }, [address, isConnected, getListingsByUser, getListing]);
 
-  const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const shortenAddress = (addr?: string) => {
+    if (!addr) return "Unknown";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   // Filter listings by tab
   const filteredListings = listings.filter((listing) => {
     if (activeTab === "listings") {
-      return listing.seller.toLowerCase() === address?.toLowerCase();
+      return listing.seller?.toLowerCase() === address?.toLowerCase();
     }
     return true;
   });

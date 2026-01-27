@@ -23,16 +23,34 @@ function ExploreContent() {
 
   useEffect(() => {
     const fetchListings = async () => {
-      if (!marketplace) return;
+      if (!marketplace) {
+        console.log("No marketplace contract available");
+        return;
+      }
 
       setIsLoading(true);
       try {
+        console.log("Fetching active listings...");
         const ids = await getActiveListings();
+        console.log("Active listing IDs:", ids);
+
         const listingPromises = ids.map(async (id) => {
-          const listing = await getListing(id);
-          if (listing) {
-            const metadata = await fetchMetadataFromIPFS(listing.metadataURI);
-            return { ...listing, metadata };
+          try {
+            const listing = await getListing(id);
+            console.log("Fetched listing", id.toString(), listing);
+            
+            if (listing) {
+              let metadata = null;
+              try {
+                metadata = await fetchMetadataFromIPFS(listing.metadataURI);
+                console.log("Fetched metadata for", id.toString(), metadata);
+              } catch (metaError) {
+                console.error("Failed to fetch metadata for listing", id.toString(), metaError);
+              }
+              return { ...listing, metadata };
+            }
+          } catch (listingError) {
+            console.error("Failed to fetch listing", id.toString(), listingError);
           }
           return null;
         });
@@ -41,6 +59,7 @@ function ExploreContent() {
           (l): l is ListingWithMetadata => l !== null
         );
 
+        console.log("Total fetched listings:", fetchedListings.length);
         setListings(fetchedListings);
       } catch (error) {
         console.error("Error fetching listings:", error);
