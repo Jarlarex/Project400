@@ -6,14 +6,17 @@ import { Readable } from "stream";
 // Supports both authentication methods
 let pinata: any;
 
+// Support both PINATA_SECRET and PINATA_SECRET_API_KEY
+const pinataSecret = process.env.PINATA_SECRET_API_KEY || process.env.PINATA_SECRET;
+
 if (process.env.PINATA_JWT) {
   console.log("🔑 Initializing Pinata with JWT");
   pinata = new pinataSDK({ pinataJWTKey: process.env.PINATA_JWT });
-} else if (process.env.PINATA_API_KEY && process.env.PINATA_SECRET_API_KEY) {
+} else if (process.env.PINATA_API_KEY && pinataSecret) {
   console.log("🔑 Initializing Pinata with API Key + Secret");
-  pinata = new pinataSDK(process.env.PINATA_API_KEY, process.env.PINATA_SECRET_API_KEY);
+  pinata = new pinataSDK(process.env.PINATA_API_KEY, pinataSecret);
 } else {
-  console.error("❌ No Pinata credentials found! Need either PINATA_JWT or (PINATA_API_KEY + PINATA_SECRET_API_KEY)");
+  console.error("❌ No Pinata credentials found! Need either PINATA_JWT or (PINATA_API_KEY + PINATA_SECRET)");
 }
 
 export async function POST(request: NextRequest) {
@@ -21,10 +24,14 @@ export async function POST(request: NextRequest) {
   console.log("=== PINATA ENV VAR CHECK ===");
   console.log("PINATA_JWT present?", Boolean(process.env.PINATA_JWT));
   console.log("PINATA_API_KEY present?", Boolean(process.env.PINATA_API_KEY));
-  console.log("PINATA_SECRET present?", Boolean(process.env.PINATA_SECRET_API_KEY));
+  console.log("PINATA_SECRET_API_KEY present?", Boolean(process.env.PINATA_SECRET_API_KEY));
+  console.log("PINATA_SECRET present?", Boolean(process.env.PINATA_SECRET));
   console.log("PINATA_GATEWAY present?", Boolean(process.env.PINATA_GATEWAY));
   if (process.env.PINATA_JWT) {
     console.log("PINATA_JWT first 10 chars:", process.env.PINATA_JWT.substring(0, 10) + "...");
+  }
+  if (process.env.PINATA_API_KEY) {
+    console.log("PINATA_API_KEY first 10 chars:", process.env.PINATA_API_KEY.substring(0, 10) + "...");
   }
   console.log("Pinata SDK initialized?", Boolean(pinata));
   console.log("===========================");
