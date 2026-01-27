@@ -55,9 +55,8 @@ export function getIPFSUrl(cid: string): string {
     cid = cid.replace("ipfs://", "");
   }
   
-  // Use public IPFS gateways with better SSL support
-  const gateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "ipfs.io";
-  return `https://${gateway}/ipfs/${cid}`;
+  // Use Cloudflare's IPFS gateway (best SSL compatibility on Windows)
+  return `https://cloudflare-ipfs.com/ipfs/${cid}`;
 }
 
 /**
