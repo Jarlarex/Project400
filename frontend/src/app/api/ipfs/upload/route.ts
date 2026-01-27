@@ -1,11 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PinataSDK } from "pinata";
-
-// Initialize Pinata v2 SDK with JWT
-// v2 SDK supports JWT authentication
-const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT || "",
-});
 
 export async function POST(request: NextRequest) {
   // 🕵️ DEBUG: Check which env vars are present
@@ -31,7 +24,7 @@ export async function POST(request: NextRequest) {
     const type = formData.get("type") as string;
 
     if (type === "file") {
-      // Upload file (image)
+      // Upload file (image) using direct REST API
       const file = formData.get("file") as File;
       if (!file) {
         return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -39,13 +32,35 @@ export async function POST(request: NextRequest) {
 
       console.log("Uploading file to Pinata:", file.name, file.type, file.size);
       
-      // Pinata v2 SDK accepts File objects directly
-      const result = await pinata.upload.file(file);
+      // Create FormData for Pinata REST API
+      const pinataFormData = new FormData();
+      pinataFormData.append("file", file);
+      
+      const pinataOptions = JSON.stringify({
+        cidVersion: 1,
+      });
+      pinataFormData.append("pinataOptions", pinataOptions);
+
+      // Direct REST API call to Pinata
+      const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.PINATA_JWT}`,
+        },
+        body: pinataFormData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Pinata upload failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
       console.log("File uploaded successfully, CID:", result.IpfsHash);
       
       return NextResponse.json({ cid: result.IpfsHash });
     } else if (type === "json") {
-      // Upload JSON metadata
+      // Upload JSON metadata using direct REST API
       const jsonData = formData.get("data") as string;
       if (!jsonData) {
         return NextResponse.json({ error: "No data provided" }, { status: 400 });
@@ -54,7 +69,27 @@ export async function POST(request: NextRequest) {
       const metadata = JSON.parse(jsonData);
       console.log("Uploading JSON metadata to Pinata");
       
-      const result = await pinata.upload.json(metadata);
+      // Direct REST API call to Pinata for JSON
+      const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.PINATA_JWT}`,
+        },
+        body: JSON.stringify({
+          pinataContent: metadata,
+          pinataOptions: {
+            cidVersion: 1,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Pinata JSON upload failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
       console.log("Metadata uploaded successfully, CID:", result.IpfsHash);
       
       return NextResponse.json({ cid: result.IpfsHash });
