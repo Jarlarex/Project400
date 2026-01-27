@@ -11,7 +11,7 @@ type FilterType = "all" | "fixed" | "auction";
 
 function ExploreContent() {
   const searchParams = useSearchParams();
-  const { marketplace } = useWallet();
+  const { marketplace, isConnected, address } = useWallet();
   const { getActiveListings, getListing } = useMarketplace();
 
   const [listings, setListings] = useState<ListingWithMetadata[]>([]);
