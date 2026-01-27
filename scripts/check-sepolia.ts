@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const contractAddress = "0xbF648124933b5f344eb85Ef22AAaB97b489a5DF6";
+  const contractAddress = "0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b"; // New escrow contract
   
   const Marketplace = await ethers.getContractFactory("Marketplace");
   const marketplace = Marketplace.attach(contractAddress);

@@ -85,8 +85,15 @@ export function useMarketplace() {
         );
 
         console.log("Transaction sent:", tx.hash);
+        console.log("Waiting for confirmation...");
         const receipt = await tx.wait();
         console.log("Transaction confirmed. Receipt:", receipt);
+        console.log("Receipt status:", receipt?.status);
+        
+        // Check if transaction succeeded
+        if (receipt?.status === 0) {
+          throw new Error("Transaction failed - contract reverted");
+        }
         
         // Get total listings AFTER transaction
         const totalListingsAfter = await marketplace.getTotalListings();
