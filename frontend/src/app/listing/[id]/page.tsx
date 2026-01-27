@@ -12,7 +12,8 @@ import {
   formatPrice,
   getTimeRemaining,
 } from "@/hooks/useMarketplace";
-import { fetchMetadataFromIPFS, getIPFSUrl } from "@/lib/ipfs";
+import { fetchMetadataFromIPFS } from "@/lib/ipfs";
+import { IpfsImage } from "@/components/IpfsImage";
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -183,8 +184,6 @@ export default function ListingDetailPage() {
     ? Number(formatPrice(listing.highestBid)) * 1.05
     : Number(formatPrice(listing.price || BigInt(0)));
 
-  const imageUrl = listing.metadata?.image ? getIPFSUrl(listing.metadata.image) : null;
-
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -203,19 +202,11 @@ export default function ListingDetailPage() {
           {/* Image */}
           <div className="relative">
             <div className="aspect-square rounded-2xl overflow-hidden bg-[var(--bg-tertiary)]">
-              {imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt={listing.metadata?.name || "Item"}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-                  <svg className="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              )}
+              <IpfsImage
+                src={listing.metadata?.image || ""}
+                alt={listing.metadata?.name || `Listing #${listing.id?.toString() ?? 'Unknown'}`}
+                className="w-full h-full object-cover"
+              />
             </div>
 
             {/* Status badge */}

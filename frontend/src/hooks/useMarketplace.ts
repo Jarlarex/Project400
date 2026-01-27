@@ -291,7 +291,22 @@ export function useMarketplace() {
       if (!marketplace) return null;
 
       try {
-        const listing = await marketplace.getListing(listingId);
+        const result = await marketplace.getListing(listingId);
+        
+        // Convert Result object to Listing with named properties
+        const listing: Listing = {
+          id: result[0],
+          seller: result[1],
+          metadataURI: result[2],
+          price: result[3],
+          listingType: result[4],
+          status: result[5],
+          createdAt: result[6],
+          endTime: result[7],
+          highestBidder: result[8],
+          highestBid: result[9],
+        };
+        
         return listing;
       } catch (err) {
         console.error("Error fetching listing:", err);
