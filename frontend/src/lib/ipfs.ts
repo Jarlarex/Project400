@@ -38,7 +38,10 @@ export async function uploadFileToIPFS(file: File): Promise<string> {
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      const errorData = await response.json();
+      console.error("❌ IPFS Upload Error Response:", errorData);
+      console.error("Status:", response.status, response.statusText);
+      throw new Error(errorData.message || `Upload failed: ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -64,7 +67,10 @@ export async function uploadMetadataToIPFS(metadata: ItemMetadata): Promise<stri
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      const errorData = await response.json();
+      console.error("❌ IPFS Metadata Upload Error Response:", errorData);
+      console.error("Status:", response.status, response.statusText);
+      throw new Error(errorData.message || `Upload failed: ${response.statusText}`);
     }
 
     const data = await response.json();

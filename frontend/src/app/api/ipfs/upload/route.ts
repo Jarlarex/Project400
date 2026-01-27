@@ -57,11 +57,20 @@ export async function POST(request: NextRequest) {
     } else {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
-  } catch (error: any) {
-    console.error("IPFS upload error:", error);
-    console.error("Error details:", error.message, error.stack);
+  } catch (err: any) {
+    console.error("IPFS upload failed:", err);
+    console.error("Full error object:", JSON.stringify(err, null, 2));
+    
     return NextResponse.json(
-      { error: error.message || "Failed to upload to IPFS" },
+      {
+        error: "Failed to upload to IPFS",
+        message: err?.message,
+        status: err?.status,
+        statusCode: err?.statusCode,
+        reason: err?.reason,
+        details: err?.response?.data ?? err?.data ?? null,
+        stack: process.env.NODE_ENV === "development" ? err?.stack : undefined,
+      },
       { status: 500 }
     );
   }
