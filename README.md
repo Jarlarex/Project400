@@ -5,7 +5,8 @@ A full-stack decentralized marketplace built on Ethereum blockchain with support
 ## 🚀 Features
 
 - **Smart Contract Marketplace**: Secure, trustless transactions powered by Ethereum
-- **Fixed-Price Listings**: Buy items instantly at a set price
+- **Escrow System**: Buyer protection with 14-day confirmation period for delivery
+- **Fixed-Price Listings**: Buy items instantly with secure escrow
 - **English Auctions**: Competitive bidding system with time-limited auctions
 - **IPFS Storage**: Decentralized storage for listing images and metadata via Pinata
 - **MetaMask Integration**: Seamless wallet connection and transaction signing
@@ -156,9 +157,9 @@ Project400/
 
 ## 📄 Smart Contract (Sepolia)
 
-- **Contract Address**: `0xbF648124933b5f344eb85Ef22AAaB97b489a5DF6`
+- **Contract Address**: `0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b`
 - **Network**: Sepolia Testnet
-- **Verified**: [View on Etherscan](https://sepolia.etherscan.io/address/0xbF648124933b5f344eb85Ef22AAaB97b489a5DF6#code)
+- **Verified**: [View on Etherscan](https://sepolia.etherscan.io/address/0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b#code)
 
 ## 🎨 Frontend Features
 
