@@ -24,7 +24,8 @@ function ExploreContent() {
   useEffect(() => {
     const fetchListings = async () => {
       if (!marketplace) {
-        console.log("No marketplace contract available");
+        console.log("Marketplace not ready yet");
+        setIsLoading(false);
         return;
       }
 

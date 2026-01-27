@@ -60,31 +60,46 @@ export function getIPFSUrl(cid: string): string {
 }
 
 /**
- * Fetch metadata from IPFS using Pinata's authenticated API
+ * Fetch metadata from IPFS with gateway fallbacks
  */
 export async function fetchMetadataFromIPFS(uri: string): Promise<ItemMetadata | null> {
   try {
-    // Extract CID from ipfs:// URI
-    let cid = uri.startsWith("ipfs://") ? uri.replace("ipfs://", "") : uri;
-    
-    // Use Pinata's Gateway API with JWT authentication (bypasses SSL issues)
-    const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT;
-    const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
-    
-    const url = `https://${gateway}/ipfs/${cid}`;
-    
-    const headers: HeadersInit = {};
-    if (pinataJwt) {
-      headers['Authorization'] = `Bearer ${pinataJwt}`;
+    const raw = uri?.trim();
+    if (!raw) return null;
+
+    // Extract CID (basic)
+    const cid = raw.startsWith("ipfs://") ? raw.slice("ipfs://".length) : raw;
+
+    // Reject obvious non-CIDs (e.g., "test123" case)
+    // Simple heuristic: real CIDs are much longer
+    if (cid.length < 20) {
+      console.warn("Invalid CID/uri for metadata:", uri);
+      return null;
     }
-    
-    const response = await fetch(url, { headers });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch metadata: ${response.status}`);
+
+    const gateways = [
+      `https://cloudflare-ipfs.com/ipfs/${cid}`,
+      `https://dweb.link/ipfs/${cid}`,
+      `https://ipfs.io/ipfs/${cid}`,
+      // Keep Pinata last (since it may have SSL issues)
+      `https://gateway.pinata.cloud/ipfs/${cid}`,
+    ];
+
+    let lastError: unknown = null;
+
+    for (const url of gateways) {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status} at ${url}`);
+        return await res.json();
+      } catch (e) {
+        lastError = e;
+        // try next gateway
+      }
     }
-    
-    return await response.json();
+
+    console.error("All IPFS gateways failed for:", cid, lastError);
+    return null;
   } catch (error) {
     console.error("Error fetching metadata from IPFS:", error);
     return null;
