@@ -55,7 +55,8 @@ export function getIPFSUrl(cid: string): string {
     cid = cid.replace("ipfs://", "");
   }
   
-  const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
+  // Use public IPFS gateways with better SSL support
+  const gateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "ipfs.io";
   return `https://${gateway}/ipfs/${cid}`;
 }
 
