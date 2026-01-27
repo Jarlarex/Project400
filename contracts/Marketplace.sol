@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IMarketplace.sol";
 
 /**
- * @title Marketplace
- * @author Decentralized Marketplace Team
+ * @title DecentraMarket
+ * @author Jarlarex | Iarfhlaith Feeney | S00238682
  * @notice A decentralized marketplace supporting fixed-price sales and English auctions
  * @dev Implements escrow pattern for secure transactions
  */

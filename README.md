@@ -1,123 +1,133 @@
-# Decentralized Marketplace dApp
+# DecentraMarket — Decentralised Marketplace dApp
 
-A full-stack decentralized marketplace built on Ethereum blockchain with support for fixed-price sales and English auctions. Built with Solidity, Hardhat, Next.js, and IPFS.
+A full-stack decentralised marketplace built on Ethereum supporting fixed-price sales and English auctions with buyer protection through escrow.
+
+![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=next.js)
+![Ethereum](https://img.shields.io/badge/Ethereum-Sepolia-3C3C3D?logo=ethereum)
+![License](https://img.shields.io/badge/License-MIT-blue)
+
+---
+
+## Purpose
+
+DecentraMarket demonstrates a trustless peer-to-peer marketplace where:
+- **Sellers** list items for fixed prices or auctions
+- **Buyers** purchase with built-in escrow protection
+- **All transactions** are recorded immutably on Ethereum
+- **No intermediary** holds custody of funds
+
+## Scope
+
+This is a **demonstration/educational project** for exploring dApp development patterns. It is deployed on the Sepolia testnet and is not intended for production use with real funds.
+
+## Audience
+
+- Developers learning Solidity and dApp architecture
+- Students studying blockchain technology
+- Anyone interested in understanding Web3 marketplace mechanics
+
+---
 
 ## 🚀 Features
 
-- **Smart Contract Marketplace**: Secure, trustless transactions powered by Ethereum
-- **Escrow System**: Buyer protection with 14-day confirmation period for delivery
-- **Fixed-Price Listings**: Buy items instantly with secure escrow
-- **English Auctions**: Competitive bidding system with time-limited auctions
-- **IPFS Storage**: Decentralized storage for listing images and metadata via Pinata
-- **MetaMask Integration**: Seamless wallet connection and transaction signing
-- **Real-time Updates**: Dynamic UI reflecting blockchain state
-- **Platform Fee System**: 2.5% platform fee on successful sales
-- **User Profiles**: Track your listings and transaction history
+| Feature | Description |
+|---------|-------------|
+| **Smart Contract Marketplace** | Trustless transactions via Ethereum smart contracts |
+| **Escrow System** | 14-day buyer protection with delivery confirmation |
+| **Fixed-Price Sales** | Instant purchases at set prices |
+| **English Auctions** | Time-limited competitive bidding (1 hour – 30 days) |
+| **IPFS Storage** | Decentralised storage for images and metadata via Pinata |
+| **MetaMask Integration** | Wallet connection and transaction signing |
+| **Platform Fees** | Configurable fee system (default 2.5%) |
+| **User Profiles** | Track listings, escrow items, and sales history |
+
+---
 
 ## 🛠️ Tech Stack
 
 ### Smart Contracts
-- **Solidity** ^0.8.24
-- **Hardhat** - Development environment
-- **OpenZeppelin** - Secure contract libraries
-- **ethers.js** - Ethereum interaction
+- **Solidity** ^0.8.24 — Contract language
+- **Hardhat** — Development environment and testing
+- **OpenZeppelin** — Secure base contracts (Ownable, ReentrancyGuard)
+- **TypeChain** — TypeScript bindings for contracts
 
 ### Frontend
-- **Next.js** 14 - React framework
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **ethers.js** v6 - Web3 integration
+- **Next.js 14** — React framework with App Router
+- **TypeScript** — Type safety
+- **TailwindCSS v4** — Utility-first styling
+- **ethers.js v6** — Ethereum library
 
-### Storage
-- **IPFS** - Decentralized file storage
-- **Pinata** - IPFS pinning service
+### Storage & Services
+- **IPFS** — Decentralised content storage
+- **Pinata** — IPFS pinning service
+- **Alchemy/Infura** — RPC provider (Sepolia)
+
+---
 
 ## 📋 Prerequisites
 
 - Node.js >= 18.0.0
+- npm or yarn
 - MetaMask browser extension
-- Sepolia testnet ETH (for deployment)
-- Pinata API credentials
+- Sepolia testnet ETH ([Alchemy Faucet](https://sepoliafaucet.com/))
+- Pinata account with JWT token
 
-## 🔧 Installation
+---
 
-1. Clone the repository:
+## 🔧 Quick Start
+
+### 1. Clone and Install
+
 ```bash
 git clone https://github.com/Jarlarex/Project400.git
 cd Project400
-```
-
-2. Install root dependencies:
-```bash
 npm install
+cd frontend && npm install && cd ..
 ```
 
-3. Install frontend dependencies:
-```bash
-cd frontend
-npm install
-cd ..
-```
+### 2. Configure Environment
 
-4. Create `.env` file in the root directory:
+Create `.env` in the root directory:
+
 ```env
-SEPOLIA_RPC_URL=your_alchemy_or_infura_url
-PRIVATE_KEY=your_wallet_private_key
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
+PRIVATE_KEY=your_deployer_wallet_private_key
 ETHERSCAN_API_KEY=your_etherscan_api_key
-PINATA_API_KEY=your_pinata_api_key
-PINATA_SECRET_KEY=your_pinata_secret_key
 ```
 
-## 🧪 Testing
+Create `frontend/.env.local`:
 
-Run the comprehensive test suite:
-```bash
-npm test
+```env
+PINATA_JWT=your_pinata_jwt_token
 ```
 
-All 29+ tests cover:
-- Contract deployment
-- Fixed-price listings
-- Auction functionality
-- Platform fee management
-- Security features
+### 3. Run Locally (Hardhat)
 
-## 🚀 Deployment
-
-### Local Development (Hardhat Network)
-
-1. Start local Hardhat node:
+Terminal 1 — Start local blockchain:
 ```bash
 npm run node
 ```
 
-2. Deploy contracts (in a new terminal):
+Terminal 2 — Deploy contracts:
 ```bash
 npm run deploy:local
 ```
 
-3. Start the frontend:
+Terminal 3 — Start frontend:
 ```bash
-cd frontend
-npm run dev
+cd frontend && npm run dev
 ```
 
-4. Configure MetaMask:
-   - Network: Localhost 8545
-   - RPC URL: http://127.0.0.1:8545
-   - Chain ID: 31337
-   - Currency: ETH
+Open http://localhost:3000 and connect MetaMask to `Localhost 8545` (Chain ID: 31337).
 
-### Sepolia Testnet
+### 4. Deploy to Sepolia
 
-1. Get Sepolia ETH from a faucet
-2. Configure `.env` with your credentials
-3. Deploy:
 ```bash
 npm run deploy:sepolia
 ```
 
-4. The contract will be automatically verified on Etherscan
+---
 
 ## 📁 Project Structure
 
@@ -126,62 +136,89 @@ Project400/
 ├── contracts/              # Solidity smart contracts
 │   ├── Marketplace.sol     # Main marketplace contract
 │   └── interfaces/         # Contract interfaces
-├── test/                   # Contract tests
+├── test/                   # Hardhat test suite
 ├── scripts/                # Deployment and utility scripts
-├── frontend/               # Next.js frontend
+├── frontend/               # Next.js application
 │   ├── src/
-│   │   ├── app/           # Next.js pages
+│   │   ├── app/           # Pages and API routes
 │   │   ├── components/    # React components
-│   │   ├── contexts/      # React contexts (Wallet)
-│   │   ├── hooks/         # Custom hooks
-│   │   └── lib/           # Utilities and constants
-├── deployments/           # Deployment artifacts
+│   │   ├── contexts/      # Wallet context
+│   │   ├── hooks/         # useMarketplace hook
+│   │   └── lib/           # IPFS utilities, constants
+├── deployments/           # Deployment artefacts
+├── docs/                  # Documentation
 └── hardhat.config.ts      # Hardhat configuration
 ```
 
-## 🎯 Smart Contract Features
+---
 
-- **ReentrancyGuard**: Protection against reentrancy attacks
-- **Ownable**: Admin functions for platform management
-- **Event Emission**: Comprehensive logging for off-chain indexing
-- **Gas Optimized**: Efficient storage and operations
-- **Upgradeable Fee System**: Dynamic platform fee adjustment
+## 🧪 Testing
 
-## 🔐 Security
+Run the test suite (29+ tests):
 
-- OpenZeppelin battle-tested contracts
-- Comprehensive test coverage
-- Reentrancy protection
-- Input validation and error handling
-- Etherscan verification for transparency
+```bash
+npm test
+```
 
-## 📄 Smart Contract (Sepolia)
-
-- **Contract Address**: `0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b`
-- **Network**: Sepolia Testnet
-- **Verified**: [View on Etherscan](https://sepolia.etherscan.io/address/0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b#code)
-
-## 🎨 Frontend Features
-
-- Responsive design for all devices
-- Real-time wallet integration
-- IPFS image uploads
-- Search and filter listings
-- Category-based navigation
-- User dashboard with transaction history
-
-## 📝 License
-
-MIT License - feel free to use this project for learning and development.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📧 Contact
-
-For questions or support, please open an issue on GitHub.
+Tests cover:
+- Contract deployment and initialisation
+- Fixed-price listing creation and purchases
+- Auction lifecycle (create, bid, end, settle)
+- Escrow flow (initiate, confirm, release)
+- Platform fee management
+- Security constraints and edge cases
 
 ---
 
-**Built with ❤️ using Ethereum, Next.js, and IPFS**
+## 📄 Deployed Contract
+
+| Network | Address | Verified |
+|---------|---------|----------|
+| Sepolia | `0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b` | [View on Etherscan](https://sepolia.etherscan.io/address/0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b#code) |
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Requirements](docs/01-requirements.md) | Problem statement, goals, functional requirements |
+| [System Architecture](docs/02-system-architecture.md) | High-level architecture and trust model |
+| [Data & Storage](docs/03-data-and-storage.md) | On-chain vs off-chain data, IPFS metadata schema |
+| [API & Contracts](docs/04-api-and-contracts.md) | Smart contract functions, events, failure modes |
+| [Sequence Flows](docs/05-sequence-flows.md) | Mermaid diagrams for key user journeys |
+| [Deployment & Ops](docs/06-deployment-and-ops.md) | Environment setup, deployment instructions |
+| [Testing](docs/07-testing.md) | Testing strategy and coverage |
+| [Glossary](docs/08-glossary.md) | Terminology definitions |
+| [Literature Review Blueprint](docs/09-literature-review-blueprint.md) | Academic overview of technologies |
+| [Architecture Overview](ARCHITECTURE.md) | System design decisions |
+| [Security](SECURITY.md) | Threat model and mitigations |
+| [Contributing](CONTRIBUTING.md) | Contribution guidelines |
+| [Changelog](CHANGELOG.md) | Version history |
+
+---
+
+## 🔐 Security
+
+- **ReentrancyGuard** — Protection against reentrancy attacks
+- **Ownable** — Admin functions restricted to contract owner
+- **Input Validation** — All user inputs validated on-chain
+- **Escrow Pattern** — Funds held by contract until conditions met
+
+See [SECURITY.md](SECURITY.md) for the full threat model.
+
+---
+
+## 📝 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## 👤 Author
+
+**Iarfhlaith Feeney (Jarlarex)** — S00238682
+
+---
+
+**Built with Ethereum, Next.js, and IPFS**

@@ -4,9 +4,9 @@
   "deployer": "0xAd84F3d174f85Dddd45D50Bb53ef063096a53c79",
   "contracts": {
     "Marketplace": {
-      "address": "0xbF648124933b5f344eb85Ef22AAaB97b489a5DF6",
+      "address": "0x7db2fdaD5542Bc80ded7f076fB2628957Aba339b",
       "platformFee": 250
     }
   },
-  "timestamp": "2026-01-27T10:25:50.170Z"
+  "timestamp": "2026-01-27T13:09:00.912Z"
 }
