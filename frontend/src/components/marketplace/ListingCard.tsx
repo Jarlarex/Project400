@@ -51,6 +51,9 @@ export function ListingCard({ listing }: ListingCardProps) {
             <span className={isAuction ? "badge badge-auction" : "badge badge-fixed"}>
               {isAuction ? "Auction" : "Fixed"}
             </span>
+            {listing.status === ListingStatus.InEscrow && (
+              <span className="badge bg-orange-500 text-white animate-pulse">In Escrow</span>
+            )}
             {listing.status === ListingStatus.Sold && (
               <span className="badge badge-sold">Sold</span>
             )}

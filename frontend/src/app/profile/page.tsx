@@ -71,11 +71,13 @@ export default function ProfilePage() {
   });
 
   const activeListings = filteredListings.filter((l) => l.status === ListingStatus.Active);
+  const inEscrowListings = filteredListings.filter((l) => l.status === ListingStatus.InEscrow);
   const soldListings = filteredListings.filter((l) => l.status === ListingStatus.Sold);
 
   // Calculate stats
   const totalListings = listings.length;
   const activeSales = listings.filter((l) => l.status === ListingStatus.Active).length;
+  const inEscrowCount = listings.filter((l) => l.status === ListingStatus.InEscrow).length;
   const totalSold = listings.filter((l) => l.status === ListingStatus.Sold).length;
   const totalVolume = listings
     .filter((l) => l.status === ListingStatus.Sold)
@@ -155,7 +157,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-[var(--border-color)]">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8 pt-8 border-t border-[var(--border-color)]">
             <div>
               <p className="text-2xl font-bold gradient-text">{totalListings}</p>
               <p className="text-sm text-[var(--text-muted)]">Total Listings</p>
@@ -163,6 +165,12 @@ export default function ProfilePage() {
             <div>
               <p className="text-2xl font-bold text-[var(--accent-primary)]">{activeSales}</p>
               <p className="text-sm text-[var(--text-muted)]">Active Sales</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-orange-500">
+                {inEscrowCount > 0 && <span className="animate-pulse">⚡</span>} {inEscrowCount}
+              </p>
+              <p className="text-sm text-[var(--text-muted)]">In Escrow</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-[var(--accent-secondary)]">{totalSold}</p>
@@ -218,6 +226,60 @@ export default function ProfilePage() {
           </div>
         ) : filteredListings.length > 0 ? (
           <div>
+            {/* In Escrow Listings - Action Required */}
+            {inEscrowListings.length > 0 && (
+              <div className="mb-12">
+                <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-2 border-orange-500/30 rounded-2xl p-6 mb-6">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-orange-500 mb-1">
+                        ⚡ Action Required - Items In Escrow
+                      </h2>
+                      <p className="text-sm text-[var(--text-secondary)]">
+                        You have {inEscrowListings.length} item{inEscrowListings.length > 1 ? 's' : ''} with funds in escrow. 
+                        Ship the item{inEscrowListings.length > 1 ? 's' : ''} to the buyer{inEscrowListings.length > 1 ? 's' : ''} immediately!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {inEscrowListings.map((listing) => (
+                    <div key={listing.id?.toString() ?? Math.random().toString()} className="relative">
+                      {/* Escrow Badge */}
+                      <div className="absolute -top-2 -right-2 z-10 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+                        IN ESCROW
+                      </div>
+                      <ListingCard listing={listing} />
+                      {/* Buyer Info */}
+                      <div className="mt-2 p-3 bg-[var(--bg-secondary)] rounded-xl border border-orange-500/20">
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Buyer:</p>
+                        <p className="text-sm font-mono text-[var(--text-primary)] mb-2">
+                          {listing.buyer?.slice(0, 6)}...{listing.buyer?.slice(-4)}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Escrow Deadline:</p>
+                        <p className="text-sm font-semibold text-orange-500">
+                          {listing.escrowDeadline 
+                            ? new Date(Number(listing.escrowDeadline) * 1000).toLocaleString()
+                            : "N/A"}
+                        </p>
+                        <Link 
+                          href={`/listing/${listing.id?.toString()}`}
+                          className="mt-3 w-full btn-secondary text-center block"
+                        >
+                          View Details →
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Active Listings */}
             {activeListings.length > 0 && (
               <div className="mb-12">
