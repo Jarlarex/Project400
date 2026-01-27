@@ -60,15 +60,28 @@ export function getIPFSUrl(cid: string): string {
 }
 
 /**
- * Fetch metadata from IPFS
+ * Fetch metadata from IPFS using Pinata's authenticated API
  */
 export async function fetchMetadataFromIPFS(uri: string): Promise<ItemMetadata | null> {
   try {
-    const url = uri.startsWith("ipfs://") ? getIPFSUrl(uri) : uri;
-    const response = await fetch(url);
+    // Extract CID from ipfs:// URI
+    let cid = uri.startsWith("ipfs://") ? uri.replace("ipfs://", "") : uri;
+    
+    // Use Pinata's Gateway API with JWT authentication (bypasses SSL issues)
+    const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT;
+    const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
+    
+    const url = `https://${gateway}/ipfs/${cid}`;
+    
+    const headers: HeadersInit = {};
+    if (pinataJwt) {
+      headers['Authorization'] = `Bearer ${pinataJwt}`;
+    }
+    
+    const response = await fetch(url, { headers });
     
     if (!response.ok) {
-      throw new Error("Failed to fetch metadata");
+      throw new Error(`Failed to fetch metadata: ${response.status}`);
     }
     
     return await response.json();
