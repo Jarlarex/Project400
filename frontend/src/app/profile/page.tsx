@@ -217,7 +217,7 @@ export default function ProfilePage() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {activeListings.map((listing) => (
-                    <ListingCard key={listing.id.toString()} listing={listing} />
+                    <ListingCard key={listing.id?.toString() ?? Math.random().toString()} listing={listing} />
                   ))}
                 </div>
               </div>
@@ -232,7 +232,7 @@ export default function ProfilePage() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {soldListings.map((listing) => (
-                    <ListingCard key={listing.id.toString()} listing={listing} />
+                    <ListingCard key={listing.id?.toString() ?? Math.random().toString()} listing={listing} />
                   ))}
                 </div>
               </div>
