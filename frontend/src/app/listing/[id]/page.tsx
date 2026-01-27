@@ -22,6 +22,9 @@ export default function ListingDetailPage() {
   const {
     getListing,
     buyItem,
+    initiatePurchase,
+    confirmDelivery,
+    releaseEscrow,
     placeBid,
     endAuction,
     cancelListing,
@@ -98,9 +101,41 @@ export default function ListingDetailPage() {
     if (!listing) return;
     resetError();
 
-    const success = await buyItem(listing.id, listing.price);
+    const success = await initiatePurchase(listing.id, listing.price);
     if (success) {
-      setActionSuccess("Purchase successful!");
+      setActionSuccess("Purchase initiated! Funds are in escrow. Confirm delivery once received.");
+      // Refresh listing
+      const data = await getListing(listing.id);
+      if (data) {
+        const metadata = await fetchMetadataFromIPFS(data.metadataURI);
+        setListing({ ...data, metadata });
+      }
+    }
+  };
+
+  const handleConfirmDelivery = async () => {
+    if (!listing) return;
+    resetError();
+
+    const success = await confirmDelivery(listing.id);
+    if (success) {
+      setActionSuccess("Delivery confirmed! Funds released to seller.");
+      // Refresh listing
+      const data = await getListing(listing.id);
+      if (data) {
+        const metadata = await fetchMetadataFromIPFS(data.metadataURI);
+        setListing({ ...data, metadata });
+      }
+    }
+  };
+
+  const handleReleaseEscrow = async () => {
+    if (!listing) return;
+    resetError();
+
+    const success = await releaseEscrow(listing.id);
+    if (success) {
+      setActionSuccess("Escrow funds released!");
       // Refresh listing
       const data = await getListing(listing.id);
       if (data) {
@@ -195,11 +230,16 @@ export default function ListingDetailPage() {
 
   const isAuction = listing.listingType === ListingType.Auction;
   const isActive = listing.status === ListingStatus.Active;
+  const isInEscrow = listing.status === ListingStatus.InEscrow;
   const isSeller = address?.toLowerCase() === listing.seller?.toLowerCase();
+  const isBuyer = address?.toLowerCase() === listing.buyer?.toLowerCase();
   const canBuy = isConnected && !isSeller && isActive && !isAuction;
   const canBid = isConnected && !isSeller && isActive && isAuction && !timeRemaining.isEnded;
   const canEndAuction = isAuction && isActive && timeRemaining.isEnded;
   const canCancel = isSeller && isActive && (!isAuction || listing.highestBidder === "0x0000000000000000000000000000000000000000");
+  const canConfirmDelivery = isConnected && isBuyer && isInEscrow;
+  const escrowDeadlinePassed = isInEscrow && listing.escrowDeadline && BigInt(Math.floor(Date.now() / 1000)) >= listing.escrowDeadline;
+  const canReleaseEscrow = isConnected && isSeller && isInEscrow && escrowDeadlinePassed;
 
   const minBid = listing.highestBid && listing.highestBid > 0
     ? Number(formatPrice(listing.highestBid)) * 1.05
@@ -358,9 +398,59 @@ export default function ListingDetailPage() {
                       Processing...
                     </>
                   ) : (
-                    "Buy Now"
+                    "Initiate Purchase (Escrow)"
                   )}
                 </button>
+              ) : canConfirmDelivery ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-[var(--accent-secondary)]/10 border border-[var(--accent-secondary)]/20">
+                    <p className="text-sm text-[var(--text-secondary)] mb-2">
+                      ✓ Purchase Initiated - Funds in Escrow
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Confirm delivery to release funds to seller
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleConfirmDelivery}
+                    disabled={isLoading}
+                    className="btn-primary w-full py-4 flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <span className="spinner" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Confirm Delivery"
+                    )}
+                  </button>
+                </div>
+              ) : canReleaseEscrow ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-[var(--accent-secondary)]/10 border border-[var(--accent-secondary)]/20">
+                    <p className="text-sm text-[var(--text-secondary)] mb-2">
+                      ⏰ Escrow Deadline Passed
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      You can now release the escrowed funds
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleReleaseEscrow}
+                    disabled={isLoading}
+                    className="btn-primary w-full py-4 flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <span className="spinner" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Release Escrow Funds"
+                    )}
+                  </button>
+                </div>
               ) : canBid ? (
                 <div className="space-y-4">
                   <div className="relative">
@@ -411,10 +501,21 @@ export default function ListingDetailPage() {
                 <p className="text-center text-[var(--text-muted)]">
                   This is your listing
                 </p>
+              ) : isSeller && isInEscrow ? (
+                <div className="p-4 rounded-xl bg-[var(--accent-warning)]/10 border border-[var(--accent-warning)]/20 text-center">
+                  <p className="text-sm text-[var(--text-secondary)] mb-2">
+                    ⏳ Awaiting Buyer Confirmation
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Buyer has 14 days to confirm delivery
+                  </p>
+                </div>
               ) : (
                 <p className="text-center text-[var(--text-muted)]">
                   {listing.status === ListingStatus.Sold
                     ? "This item has been sold"
+                    : listing.status === ListingStatus.InEscrow
+                    ? "This item is currently in escrow"
                     : "This listing is no longer available"}
                 </p>
               )}
