@@ -31,7 +31,7 @@
 
 ### My Solution
 - Trustless transactions via smart contracts
-- Lower fees (2.5%)
+- Lower to no fees
 - Buyer protection through escrow
 - No central authority
 
@@ -46,7 +46,7 @@
 |------|--------------|
 | **Seller** | Lists items, ships goods, receives payment |
 | **Buyer** | Browses, purchases, confirms delivery |
-| **Platform Owner** | Sets fees, withdraws platform fees |
+| **Platform Owner** | Oversees operation |
 
 ### Key Features Required
 1. **Wallet Connection** — MetaMask integration
@@ -293,19 +293,25 @@
 
 ---
 
-# Timing Guide
+# Timing Guide (10 Minutes Max)
 
-| Slide | Time (approx) |
-|-------|---------------|
-| 1. Title | 30 sec |
-| 2. Overview | 2 min |
-| 3. Requirements | 2 min |
-| 4. Tech Stack | 2-3 min |
-| 5. Research | 2 min |
-| 6. Project Management | 1-2 min |
-| 7. Work To Date | 2-3 min |
-| 8. Future Work | 1-2 min |
-| 9. Demo | 3-5 min |
-| 10. Questions | As needed |
+| Slide | Time |
+|-------|------|
+| 1. Title | 15 sec |
+| 2. Overview | 1.5 min |
+| 3. Requirements | 1 min |
+| 4. Tech Stack | 1.5 min |
+| 5. Research | 1 min |
+| 6. Project Management | 1 min |
+| 7. Work To Date | 1.5 min |
+| 8. Future Work | 1 min |
+| 9. Demo | SKIP (show screenshots instead) |
+| 10. Questions | 30 sec |
 
-**Total**: ~15-20 minutes (adjust demo for time)
+**Total**: ~10 minutes
+
+### Tips for 10 Minutes
+- **Skip the live demo** — use screenshots on Slide 7 instead
+- **Don't read tables** — highlight 1-2 key points per slide
+- **Combine slides if needed** — Research + Project Management could be one slide
+- **Practice** — time yourself, cut anything over
