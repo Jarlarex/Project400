@@ -16,7 +16,7 @@ export default function Home() {
               The Future of{" "}
               <span className="gradient-text">Decentralized</span>{" "}
               Commerce
-            </h1>
+          </h1>
             <p className="text-lg sm:text-xl text-[var(--text-secondary)] mb-10 opacity-0 animate-slide-up stagger-1" style={{ animationFillMode: 'forwards' }}>
               Buy, sell, and auction items directly on the blockchain.
               Low 2.5% platform fee, secure escrow, full transparency.
@@ -90,8 +90,8 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-3">Connect Wallet</h3>
               <p className="text-[var(--text-secondary)]">
                 Link your MetaMask wallet to start buying or selling items instantly
-              </p>
-            </div>
+          </p>
+        </div>
 
             {/* Feature 2 */}
             <div className="card p-8 text-center">
