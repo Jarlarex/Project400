@@ -34,3 +34,6 @@ coverage.json
 
 # Deployment files
 ignition/deployments/
+
+# Documentation (personal/development docs)
+docs/
