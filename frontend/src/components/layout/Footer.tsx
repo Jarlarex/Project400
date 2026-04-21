@@ -10,9 +10,9 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00d4aa] to-[#7c3aed] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-[6px] bg-[var(--accent-primary)] flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-[#0a0b0f]"
+                  className="w-6 h-6 text-[var(--bg-primary)]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -26,7 +26,7 @@ export function Footer() {
                 </svg>
               </div>
               <span className="text-xl font-bold">
-                <span className="gradient-text">Decentra</span>
+                <span className="text-[var(--accent-primary)]">Decentra</span>
                 <span className="text-[var(--text-primary)]">Market</span>
               </span>
             </Link>
@@ -99,7 +99,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-[var(--border-color)] flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[var(--text-muted)] text-sm">
-            © 2026 DecentraMarket. Open source project.
+            &copy; 2026 DecentraMarket. Open source project.
           </p>
           <div className="flex items-center gap-4">
             <a

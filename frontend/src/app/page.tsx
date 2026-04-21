@@ -14,7 +14,7 @@ export default function Home() {
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 opacity-0 animate-slide-up" style={{ animationFillMode: 'forwards' }}>
               The Future of{" "}
-              <span className="gradient-text">Decentralized</span>{" "}
+              <span className="text-[var(--accent-primary)]">Decentralized</span>{" "}
               Commerce
           </h1>
             <p className="text-lg sm:text-xl text-[var(--text-secondary)] mb-10 opacity-0 animate-slide-up stagger-1" style={{ animationFillMode: 'forwards' }}>
@@ -40,12 +40,12 @@ export default function Home() {
               { label: "Network", value: "Sepolia" },
               { label: "Secure", value: "100%" },
               { label: "Decentralized", value: "Yes" },
-            ].map((stat, i) => (
+            ].map((stat) => (
               <div
                 key={stat.label}
                 className="card p-6 text-center"
               >
-                <div className="text-2xl sm:text-3xl font-bold gradient-text mb-2">
+                <div className="text-2xl sm:text-3xl font-bold text-[var(--accent-primary)] mb-2">
                   {stat.value}
                 </div>
                 <div className="text-[var(--text-secondary)] text-sm">
@@ -72,7 +72,7 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-8">
             {/* Feature 1 */}
             <div className="card p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#00d4aa]/20 to-[#00d4aa]/5 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-[10px] bg-[var(--accent-primary)]/10 flex items-center justify-center">
                 <svg
                   className="w-8 h-8 text-[var(--accent-primary)]"
                   fill="none"
@@ -95,9 +95,9 @@ export default function Home() {
 
             {/* Feature 2 */}
             <div className="card p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#7c3aed]/20 to-[#7c3aed]/5 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-[10px] bg-[var(--accent-primary)]/10 flex items-center justify-center">
                 <svg
-                  className="w-8 h-8 text-[var(--accent-secondary)]"
+                  className="w-8 h-8 text-[var(--accent-primary)]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -118,9 +118,9 @@ export default function Home() {
 
             {/* Feature 3 */}
             <div className="card p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#f59e0b]/20 to-[#f59e0b]/5 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-[10px] bg-[var(--accent-primary)]/10 flex items-center justify-center">
                 <svg
-                  className="w-8 h-8 text-[var(--accent-warning)]"
+                  className="w-8 h-8 text-[var(--accent-primary)]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -146,7 +146,7 @@ export default function Home() {
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="card p-12 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-[#00d4aa]/10 to-[#7c3aed]/10" />
+            <div className="absolute inset-0 bg-[var(--accent-primary)]/5" />
             <div className="relative z-10">
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">
                 Ready to Start Trading?

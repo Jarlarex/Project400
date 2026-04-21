@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useMarketplace";
 import { fetchMetadataFromIPFS, isValidCID } from "@/lib/ipfs";
 import { IpfsImage } from "@/components/IpfsImage";
+import { shortenAddress } from "@/lib/utils";
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -46,12 +47,9 @@ export default function ListingDetailPage() {
     const fetchListing = async () => {
       setIsPageLoading(true);
       try {
-        console.log("Fetching listing with ID:", listingId);
         const data = await getListing(BigInt(listingId));
-        console.log("Fetched listing data:", data);
-        
+
         if (data) {
-          // Validate CID before attempting to fetch metadata
           const cid = data.metadataURI.startsWith("ipfs://")
             ? data.metadataURI.replace("ipfs://", "")
             : data.metadataURI;
@@ -60,20 +58,15 @@ export default function ListingDetailPage() {
           if (isValidCID(cid)) {
             try {
               metadata = await fetchMetadataFromIPFS(data.metadataURI);
-              console.log("Fetched metadata:", metadata);
             } catch (metaError) {
-              console.error("Failed to fetch metadata for listing", listingId, metaError);
+              // Metadata fetch failed, continue with null
             }
-          } else {
-            console.warn("Invalid CID for listing:", listingId, data.metadataURI);
           }
-          
+
           setListing({ ...data, metadata });
-        } else {
-          console.error("No listing data returned for ID:", listingId);
         }
       } catch (err) {
-        console.error("Error fetching listing:", err);
+        // Failed to fetch listing
       } finally {
         setIsPageLoading(false);
       }
@@ -97,6 +90,15 @@ export default function ListingDetailPage() {
     return () => clearInterval(interval);
   }, [listing]);
 
+  const refreshListing = async () => {
+    if (!listing) return;
+    const data = await getListing(listing.id);
+    if (data) {
+      const metadata = await fetchMetadataFromIPFS(data.metadataURI);
+      setListing({ ...data, metadata });
+    }
+  };
+
   const handleBuy = async () => {
     if (!listing) return;
     resetError();
@@ -104,12 +106,7 @@ export default function ListingDetailPage() {
     const success = await initiatePurchase(listing.id, listing.price);
     if (success) {
       setActionSuccess("Purchase initiated! Funds are in escrow. Confirm delivery once received.");
-      // Refresh listing
-      const data = await getListing(listing.id);
-      if (data) {
-        const metadata = await fetchMetadataFromIPFS(data.metadataURI);
-        setListing({ ...data, metadata });
-      }
+      await refreshListing();
     }
   };
 
@@ -120,12 +117,7 @@ export default function ListingDetailPage() {
     const success = await confirmDelivery(listing.id);
     if (success) {
       setActionSuccess("Delivery confirmed! Funds released to seller.");
-      // Refresh listing
-      const data = await getListing(listing.id);
-      if (data) {
-        const metadata = await fetchMetadataFromIPFS(data.metadataURI);
-        setListing({ ...data, metadata });
-      }
+      await refreshListing();
     }
   };
 
@@ -136,12 +128,7 @@ export default function ListingDetailPage() {
     const success = await releaseEscrow(listing.id);
     if (success) {
       setActionSuccess("Escrow funds released!");
-      // Refresh listing
-      const data = await getListing(listing.id);
-      if (data) {
-        const metadata = await fetchMetadataFromIPFS(data.metadataURI);
-        setListing({ ...data, metadata });
-      }
+      await refreshListing();
     }
   };
 
@@ -153,12 +140,7 @@ export default function ListingDetailPage() {
     if (success) {
       setActionSuccess("Bid placed successfully!");
       setBidAmount("");
-      // Refresh listing
-      const data = await getListing(listing.id);
-      if (data) {
-        const metadata = await fetchMetadataFromIPFS(data.metadataURI);
-        setListing({ ...data, metadata });
-      }
+      await refreshListing();
     }
   };
 
@@ -169,12 +151,7 @@ export default function ListingDetailPage() {
     const success = await endAuction(listing.id);
     if (success) {
       setActionSuccess("Auction ended successfully!");
-      // Refresh listing
-      const data = await getListing(listing.id);
-      if (data) {
-        const metadata = await fetchMetadataFromIPFS(data.metadataURI);
-        setListing({ ...data, metadata });
-      }
+      await refreshListing();
     }
   };
 
@@ -187,11 +164,6 @@ export default function ListingDetailPage() {
       setActionSuccess("Listing cancelled!");
       router.push("/explore");
     }
-  };
-
-  const shortenAddress = (addr?: string) => {
-    if (!addr) return "Unknown";
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
   if (isPageLoading) {
@@ -262,7 +234,7 @@ export default function ListingDetailPage() {
         <div className="grid md:grid-cols-2 gap-12">
           {/* Image */}
           <div className="relative">
-            <div className="aspect-square rounded-2xl overflow-hidden bg-[var(--bg-tertiary)]">
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-[var(--bg-tertiary)]">
               <IpfsImage
                 src={listing.metadata?.image || ""}
                 alt={listing.metadata?.name || `Listing #${listing.id?.toString() ?? 'Unknown'}`}
@@ -291,6 +263,12 @@ export default function ListingDetailPage() {
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
               {listing.metadata?.name || `Item #${listing.id?.toString() ?? 'Unknown'}`}
             </h1>
+
+            {listing.metadata?.category && (
+              <span className="inline-block px-3 py-1 rounded-[20px] text-xs font-medium bg-[rgba(244,241,222,0.06)] text-[rgba(244,241,222,0.5)] mb-3">
+                {listing.metadata.category}
+              </span>
+            )}
 
             <p className="text-[var(--text-secondary)] mb-6">
               Listed by{" "}
@@ -374,7 +352,7 @@ export default function ListingDetailPage() {
                 {isAuction && listing.highestBidder !== "0x0000000000000000000000000000000000000000" && (
                   <div className="text-right">
                     <p className="text-sm text-[var(--text-muted)] mb-1">Highest Bidder</p>
-                    <p className="font-mono text-[var(--accent-secondary)]">
+                    <p className="font-mono text-[var(--accent-primary)]">
                       {shortenAddress(listing.highestBidder)}
                     </p>
                   </div>
@@ -403,9 +381,9 @@ export default function ListingDetailPage() {
                 </button>
               ) : canConfirmDelivery ? (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-[var(--accent-secondary)]/10 border border-[var(--accent-secondary)]/20">
+                  <div className="p-4 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20">
                     <p className="text-sm text-[var(--text-secondary)] mb-2">
-                      ✓ Purchase Initiated - Funds in Escrow
+                      Purchase Initiated - Funds in Escrow
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
                       Confirm delivery to release funds to seller
@@ -428,9 +406,9 @@ export default function ListingDetailPage() {
                 </div>
               ) : canReleaseEscrow ? (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-[var(--accent-secondary)]/10 border border-[var(--accent-secondary)]/20">
+                  <div className="p-4 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20">
                     <p className="text-sm text-[var(--text-secondary)] mb-2">
-                      ⏰ Escrow Deadline Passed
+                      Escrow Deadline Passed
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
                       You can now release the escrowed funds
@@ -504,7 +482,7 @@ export default function ListingDetailPage() {
               ) : isSeller && isInEscrow ? (
                 <div className="p-4 rounded-xl bg-[var(--accent-warning)]/10 border border-[var(--accent-warning)]/20 text-center">
                   <p className="text-sm text-[var(--text-secondary)] mb-2">
-                    ⏳ Awaiting Buyer Confirmation
+                    Awaiting Buyer Confirmation
                   </p>
                   <p className="text-xs text-[var(--text-muted)]">
                     Buyer has 14 days to confirm delivery

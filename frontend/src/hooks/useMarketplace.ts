@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@/contexts/WalletContext";
 import { parseEther, formatEther } from "ethers";
 import { fetchMetadataFromIPFS, ItemMetadata } from "@/lib/ipfs";
+import toast from "react-hot-toast";
 
 export enum ListingType {
   FixedPrice = 0,
@@ -62,21 +63,11 @@ export function useMarketplace() {
       setError(null);
 
       try {
-        const contractAddress = await marketplace.getAddress();
-        console.log("Marketplace contract address:", contractAddress);
-        console.log("Creating listing with params:", { metadataURI, price, isAuction, durationInSeconds });
-        
-        // Check network
-        const network = await marketplace.runner?.provider?.getNetwork();
-        console.log("Connected to network:", network?.chainId.toString(), network?.name);
-        
         const priceWei = parseEther(price);
-        
+
         // Get total listings BEFORE transaction
-        console.log("Calling getTotalListings...");
         const totalListingsBefore = await marketplace.getTotalListings();
-        console.log("Total listings before:", totalListingsBefore.toString());
-        
+
         const tx = await marketplace.createListing(
           metadataURI,
           priceWei,
@@ -84,42 +75,31 @@ export function useMarketplace() {
           isAuction ? durationInSeconds : 0
         );
 
-        console.log("Transaction sent:", tx.hash);
-        console.log("Waiting for confirmation...");
         const receipt = await tx.wait();
-        console.log("Transaction confirmed. Receipt:", receipt);
-        console.log("Receipt status:", receipt?.status);
-        
+
         // Check if transaction succeeded
         if (receipt?.status === 0) {
           throw new Error("Transaction failed - contract reverted");
         }
-        
+
         // Get total listings AFTER transaction
         const totalListingsAfter = await marketplace.getTotalListings();
-        console.log("Total listings after:", totalListingsAfter.toString());
 
         // Get listing ID - try multiple methods
         let listingId: bigint | null = null;
 
-        console.log("Number of logs in receipt:", receipt.logs.length);
-
         // Method 1: Compare total listings before and after
         if (totalListingsAfter > totalListingsBefore) {
-          // The new listing ID is totalListingsBefore (0-indexed)
           listingId = totalListingsBefore;
-          console.log("Method 1 SUCCESS (before/after comparison) - Listing ID:", listingId.toString());
         }
 
         // Method 2: Try parsing event logs
         if (!listingId && receipt.logs.length > 0) {
-          console.log("Method 1 failed, trying Method 2 (event parsing)...");
           for (const log of receipt.logs) {
             try {
               const parsedLog = marketplace.interface.parseLog(log);
               if (parsedLog && parsedLog.name === "ListingCreated") {
                 listingId = parsedLog.args[0];
-                console.log("Method 2 SUCCESS - Listing ID:", listingId?.toString());
                 break;
               }
             } catch (e) {
@@ -131,19 +111,18 @@ export function useMarketplace() {
         // Method 3: Fallback - just use the count minus 1
         if (!listingId && totalListingsAfter > 0) {
           listingId = totalListingsAfter - BigInt(1);
-          console.log("Method 3 (fallback) - Listing ID:", listingId?.toString());
         }
 
         if (!listingId) {
           throw new Error("Failed to get listing ID from transaction. Contract may have reverted.");
         }
 
-        console.log("Listing created with ID:", listingId?.toString());
+        toast.success("Listing created successfully!");
         return listingId;
       } catch (err: any) {
-        console.error("Error creating listing:", err);
         const message = err.reason || err.message || "Failed to create listing";
         setError(message);
+        toast.error(message);
         return null;
       } finally {
         setIsLoading(false);
@@ -168,10 +147,12 @@ export function useMarketplace() {
       try {
         const tx = await marketplace.buyItem(listingId, { value: price });
         await tx.wait();
+        toast.success("Item purchased successfully!");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to buy item";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -196,10 +177,12 @@ export function useMarketplace() {
       try {
         const tx = await marketplace.initiatePurchase(listingId, { value: price });
         await tx.wait();
+        toast.success("Purchase initiated! Funds are in escrow.");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to initiate purchase";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -224,10 +207,12 @@ export function useMarketplace() {
       try {
         const tx = await marketplace.confirmDelivery(listingId);
         await tx.wait();
+        toast.success("Delivery confirmed! Funds released.");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to confirm delivery";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -252,10 +237,12 @@ export function useMarketplace() {
       try {
         const tx = await marketplace.releaseEscrow(listingId);
         await tx.wait();
+        toast.success("Escrow funds released!");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to release escrow";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -281,10 +268,12 @@ export function useMarketplace() {
         const bidWei = parseEther(bidAmount);
         const tx = await marketplace.placeBid(listingId, { value: bidWei });
         await tx.wait();
+        toast.success("Bid placed successfully!");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to place bid";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -309,10 +298,12 @@ export function useMarketplace() {
       try {
         const tx = await marketplace.endAuction(listingId);
         await tx.wait();
+        toast.success("Auction ended successfully!");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to end auction";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -337,10 +328,12 @@ export function useMarketplace() {
       try {
         const tx = await marketplace.cancelListing(listingId);
         await tx.wait();
+        toast.success("Listing cancelled.");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to cancel listing";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -365,10 +358,12 @@ export function useMarketplace() {
       try {
         const tx = await marketplace.withdrawBid(listingId);
         await tx.wait();
+        toast.success("Bid withdrawn successfully!");
         return true;
       } catch (err: any) {
         const message = err.reason || err.message || "Failed to withdraw bid";
         setError(message);
+        toast.error(message);
         return false;
       } finally {
         setIsLoading(false);
@@ -386,15 +381,14 @@ export function useMarketplace() {
 
       try {
         const result = await marketplace.getListing(listingId);
-        
-        // Convert Result object to Listing with named properties
+
         const listing: Listing = {
           id: result[0],
           seller: result[1],
           metadataURI: result[2],
           price: result[3],
-          listingType: Number(result[4]), // Convert to number for enum comparison
-          status: Number(result[5]), // Convert to number for enum comparison
+          listingType: Number(result[4]),
+          status: Number(result[5]),
           createdAt: result[6],
           endTime: result[7],
           highestBidder: result[8],
@@ -402,12 +396,9 @@ export function useMarketplace() {
           buyer: result[10],
           escrowDeadline: result[11],
         };
-        
-        console.log("Parsed listing:", listingId.toString(), "Type:", listing.listingType, "Status:", listing.status);
-        
+
         return listing;
       } catch (err) {
-        console.error("Error fetching listing:", err);
         return null;
       }
     },
@@ -438,7 +429,6 @@ export function useMarketplace() {
       const ids = await marketplace.getActiveListings();
       return ids;
     } catch (err) {
-      console.error("Error fetching active listings:", err);
       return [];
     }
   }, [marketplace]);
@@ -454,7 +444,6 @@ export function useMarketplace() {
         const ids = await marketplace.getListingsByUser(userAddress);
         return ids;
       } catch (err) {
-        console.error("Error fetching user listings:", err);
         return [];
       }
     },
@@ -471,7 +460,6 @@ export function useMarketplace() {
       try {
         return await marketplace.getPendingReturn(listingId, bidder);
       } catch (err) {
-        console.error("Error fetching pending return:", err);
         return BigInt(0);
       }
     },
@@ -487,7 +475,6 @@ export function useMarketplace() {
     try {
       return await marketplace.getTotalListings();
     } catch (err) {
-      console.error("Error fetching total listings:", err);
       return BigInt(0);
     }
   }, [marketplace]);

@@ -4,6 +4,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { BrowserProvider, JsonRpcSigner, Contract } from "ethers";
 import MarketplaceABI from "@/lib/contracts/Marketplace.json";
 
+// Expected chain from contract deployment
+const EXPECTED_CHAIN_ID = MarketplaceABI.chainId;
+
 // Supported chains
 const SUPPORTED_CHAINS: Record<number, { name: string; rpcUrl: string }> = {
   31337: { name: "Hardhat Local", rpcUrl: "http://127.0.0.1:8545" },
@@ -14,6 +17,7 @@ interface WalletContextType {
   address: string | null;
   isConnected: boolean;
   isConnecting: boolean;
+  isWrongNetwork: boolean;
   chainId: number | null;
   balance: string;
   provider: BrowserProvider | null;
@@ -50,6 +54,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   const isConnected = !!address;
+  const isWrongNetwork = isConnected && chainId !== null && chainId !== EXPECTED_CHAIN_ID;
 
   // Initialize provider and check for existing connection
   useEffect(() => {
@@ -58,22 +63,19 @@ export function WalletProvider({ children }: WalletProviderProps) {
         const browserProvider = new BrowserProvider(window.ethereum);
         setProvider(browserProvider);
 
-        // Check if already connected
         try {
           const accounts = await window.ethereum.request({ method: "eth_accounts" });
           if (accounts.length > 0) {
             await handleAccountsChanged(accounts, browserProvider);
           }
         } catch (err) {
-          console.error("Error checking accounts:", err);
+          // Failed to check existing accounts
         }
 
-        // Listen for account changes
         window.ethereum.on("accountsChanged", (accounts: string[]) => {
           handleAccountsChanged(accounts, browserProvider);
         });
 
-        // Listen for chain changes
         window.ethereum.on("chainChanged", (newChainId: string) => {
           setChainId(parseInt(newChainId, 16));
           window.location.reload();
@@ -92,7 +94,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   const handleAccountsChanged = async (accounts: string[], browserProvider: BrowserProvider) => {
     if (accounts.length === 0) {
-      // User disconnected
       setAddress(null);
       setSigner(null);
       setMarketplace(null);
@@ -104,20 +105,12 @@ export function WalletProvider({ children }: WalletProviderProps) {
       const newSigner = await browserProvider.getSigner();
       setSigner(newSigner);
 
-      // Get chain ID
       const network = await browserProvider.getNetwork();
       setChainId(Number(network.chainId));
 
-      // Get balance
       const balanceWei = await browserProvider.getBalance(newAddress);
       setBalance((Number(balanceWei) / 1e18).toFixed(4));
 
-      // Initialize marketplace contract
-      console.log("Initializing marketplace contract...");
-      console.log("Contract address:", MarketplaceABI.address);
-      console.log("Chain ID:", Number(network.chainId));
-      console.log("Expected chain ID:", MarketplaceABI.chainId);
-      
       if (MarketplaceABI.address && MarketplaceABI.abi) {
         const marketplaceContract = new Contract(
           MarketplaceABI.address,
@@ -125,9 +118,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
           newSigner
         );
         setMarketplace(marketplaceContract);
-        console.log("Marketplace contract initialized successfully");
-      } else {
-        console.error("Missing contract address or ABI");
       }
     }
   };
@@ -179,7 +169,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
         params: [{ chainId: chainHex }],
       });
     } catch (err: any) {
-      // Chain not added to MetaMask
       if (err.code === 4902) {
         const chainInfo = SUPPORTED_CHAINS[targetChainId];
         if (chainInfo) {
@@ -210,6 +199,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         address,
         isConnected,
         isConnecting,
+        isWrongNetwork,
         chainId,
         balance,
         provider,
@@ -226,7 +216,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
   );
 }
 
-// Extend Window interface for TypeScript
 declare global {
   interface Window {
     ethereum?: any;

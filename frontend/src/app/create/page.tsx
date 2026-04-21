@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@/contexts/WalletContext";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { uploadListingToIPFS } from "@/lib/ipfs";
+import { CATEGORIES } from "@/lib/constants";
 
 export default function CreateListingPage() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function CreateListingPage() {
     price: "",
     isAuction: false,
     duration: "86400", // 1 day in seconds
-    category: "",
+    category: "Other",
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -55,18 +56,13 @@ export default function CreateListingPage() {
     setIsUploading(true);
 
     try {
-      // Upload to IPFS
-      console.log("Uploading to IPFS...");
       const { metadataUri } = await uploadListingToIPFS(
         formData.name,
         formData.description,
         imageFile,
         formData.category
       );
-      console.log("IPFS upload successful:", metadataUri);
 
-      // Create listing on chain
-      console.log("Creating listing on blockchain...");
       const listingId = await createListing(
         metadataUri,
         formData.price,
@@ -74,16 +70,12 @@ export default function CreateListingPage() {
         formData.isAuction ? parseInt(formData.duration) : 0
       );
 
-      console.log("Listing created with ID:", listingId?.toString());
-
       if (listingId !== null) {
-        console.log("Redirecting to listing page...");
         router.push(`/listing/${listingId.toString()}`);
       } else {
         setUploadError("Listing created but ID could not be retrieved. Check your profile page.");
       }
     } catch (err: any) {
-      console.error("Error creating listing:", err);
       setUploadError(err.message || "Failed to create listing");
     } finally {
       setIsUploading(false);
@@ -103,7 +95,7 @@ export default function CreateListingPage() {
     return (
       <div className="min-h-screen py-20">
         <div className="max-w-lg mx-auto px-4 text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#00d4aa]/20 to-[#7c3aed]/20 flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-[10px] bg-[var(--accent-primary)]/10 flex items-center justify-center">
             <svg
               className="w-10 h-10 text-[var(--accent-primary)]"
               fill="none"
@@ -218,20 +210,18 @@ export default function CreateListingPage() {
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium mb-2">Category</label>
+            <label className="block text-sm font-medium mb-2">Category *</label>
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               className="input"
+              required
             >
-              <option value="">Select a category</option>
-              <option value="art">Art</option>
-              <option value="collectibles">Collectibles</option>
-              <option value="electronics">Electronics</option>
-              <option value="fashion">Fashion</option>
-              <option value="gaming">Gaming</option>
-              <option value="music">Music</option>
-              <option value="other">Other</option>
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -269,15 +259,15 @@ export default function CreateListingPage() {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, isAuction: true })}
-                className={`p-4 rounded-xl border-2 transition-all ${
+                className={`p-4 rounded-[10px] border-2 transition-all ${
                   formData.isAuction
-                    ? "border-[var(--accent-secondary)] bg-[var(--accent-secondary)]/10"
+                    ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
                     : "border-[var(--border-color)] hover:border-[var(--border-color-light)]"
                 }`}
               >
                 <svg
                   className={`w-8 h-8 mx-auto mb-2 ${
-                    formData.isAuction ? "text-[var(--accent-secondary)]" : "text-[var(--text-muted)]"
+                    formData.isAuction ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)]"
                   }`}
                   fill="none"
                   viewBox="0 0 24 24"

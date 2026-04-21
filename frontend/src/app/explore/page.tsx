@@ -1,36 +1,59 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { useMarketplace, ListingWithMetadata, ListingType, ListingStatus } from "@/hooks/useMarketplace";
+import { useMarketplace, ListingWithMetadata, ListingType, ListingStatus, formatPrice } from "@/hooks/useMarketplace";
 import { fetchMetadataFromIPFS } from "@/lib/ipfs";
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { useWallet } from "@/contexts/WalletContext";
+import { CATEGORIES } from "@/lib/constants";
+import { ethers } from "ethers";
 
-type FilterType = "all" | "fixed" | "auction";
+type TypeFilter = "all" | "fixed" | "auction";
+type StatusFilter = "all" | "active" | "sold" | "ended";
+type SortOption = "newest" | "oldest" | "price-low" | "price-high" | "ending-soon";
 
 function ExploreContent() {
   const searchParams = useSearchParams();
-  const { marketplace, isConnected, address } = useWallet();
+  const { marketplace } = useWallet();
   const { getActiveListings, getListing } = useMarketplace();
 
   const [listings, setListings] = useState<ListingWithMetadata[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterType>(
-    (searchParams.get("type") as FilterType) || "all"
-  );
+
+  // Filter state
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>(
+    (searchParams.get("type") as TypeFilter) || "all"
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    typeFilter !== "all" ||
+    statusFilter !== "all" ||
+    sortOption !== "newest" ||
+    minPrice !== "" ||
+    maxPrice !== "" ||
+    categoryFilter !== "all";
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setTypeFilter("all");
+    setStatusFilter("all");
+    setSortOption("newest");
+    setMinPrice("");
+    setMaxPrice("");
+    setCategoryFilter("all");
+  };
 
   useEffect(() => {
     const fetchListings = async () => {
-      console.log("=== EXPLORE PAGE: Starting fetch ===");
-      console.log("Marketplace contract:", marketplace?.target || "NULL");
-      console.log("Is connected:", isConnected);
-      console.log("User address:", address);
-      
       if (!marketplace) {
-        // Marketplace contract not initialized yet (wallet not connected)
-        console.log("No marketplace contract - skipping fetch");
         setIsLoading(false);
         setListings([]);
         return;
@@ -38,34 +61,28 @@ function ExploreContent() {
 
       setIsLoading(true);
       try {
-        console.log("Fetching active listings from contract:", marketplace.target);
         const ids = await getActiveListings();
-        console.log("Active listing IDs:", ids, "Count:", ids.length);
 
         const listingPromises = ids.map(async (id) => {
           try {
             const listing = await getListing(id);
-            console.log("Fetched listing", id.toString(), listing);
-            
+
             if (listing) {
-              // Skip listings with invalid metadata URIs (e.g., test data)
               const cid = listing.metadataURI?.replace("ipfs://", "");
               if (!cid || cid.length < 20 || (!cid.startsWith("Qm") && !cid.startsWith("baf"))) {
-                console.warn("Skipping listing with invalid CID:", id.toString(), listing.metadataURI);
                 return null;
               }
 
               let metadata = null;
               try {
                 metadata = await fetchMetadataFromIPFS(listing.metadataURI);
-                console.log("Fetched metadata for", id.toString(), metadata);
               } catch (metaError) {
-                console.error("Failed to fetch metadata for listing", id.toString(), metaError);
+                // Metadata fetch failed, continue with null metadata
               }
               return { ...listing, metadata };
             }
           } catch (listingError) {
-            console.error("Failed to fetch listing", id.toString(), listingError);
+            // Failed to fetch listing, skip it
           }
           return null;
         });
@@ -74,13 +91,9 @@ function ExploreContent() {
           (l): l is ListingWithMetadata => l !== null
         );
 
-        console.log("Total fetched listings:", fetchedListings.length);
-        fetchedListings.forEach(l => {
-          console.log(`Listing ${l.id}: Type=${l.listingType} (FixedPrice=0, Auction=1), Status=${l.status}`);
-        });
         setListings(fetchedListings);
       } catch (error) {
-        console.error("Error fetching listings:", error);
+        // Failed to fetch listings
       } finally {
         setIsLoading(false);
       }
@@ -89,22 +102,108 @@ function ExploreContent() {
     fetchListings();
   }, [marketplace, getActiveListings, getListing]);
 
-  // Filter listings
-  const filteredListings = listings.filter((listing) => {
-    // Type filter
-    if (filter === "fixed" && listing.listingType !== ListingType.FixedPrice) return false;
-    if (filter === "auction" && listing.listingType !== ListingType.Auction) return false;
+  // Compute filtered and sorted listings
+  const filteredListings = useMemo(() => {
+    const now = BigInt(Math.floor(Date.now() / 1000));
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const name = listing.metadata?.name?.toLowerCase() || "";
-      const description = listing.metadata?.description?.toLowerCase() || "";
-      return name.includes(query) || description.includes(query);
-    }
+    let result = listings.filter((listing) => {
+      // Text search
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const name = listing.metadata?.name?.toLowerCase() || "";
+        const description = listing.metadata?.description?.toLowerCase() || "";
+        if (!name.includes(query) && !description.includes(query)) return false;
+      }
 
-    return true;
-  });
+      // Type filter
+      if (typeFilter === "fixed" && listing.listingType !== ListingType.FixedPrice) return false;
+      if (typeFilter === "auction" && listing.listingType !== ListingType.Auction) return false;
+
+      // Status filter
+      if (statusFilter !== "all") {
+        const isAuction = listing.listingType === ListingType.Auction;
+        const isPastEndTime = isAuction && listing.endTime > BigInt(0) && listing.endTime < now;
+
+        if (statusFilter === "active") {
+          if (listing.status !== ListingStatus.Active) return false;
+          if (isPastEndTime) return false;
+        } else if (statusFilter === "ended") {
+          if (!isPastEndTime || listing.status !== ListingStatus.Active) return false;
+        } else if (statusFilter === "sold") {
+          if (listing.status !== ListingStatus.Sold && listing.status !== ListingStatus.InEscrow) return false;
+        }
+      }
+
+      // Price range filter
+      const displayPrice = listing.listingType === ListingType.Auction && listing.highestBid > BigInt(0)
+        ? listing.highestBid
+        : listing.price;
+
+      if (minPrice !== "") {
+        try {
+          const minWei = ethers.parseEther(minPrice);
+          if (displayPrice < minWei) return false;
+        } catch {
+          // Invalid input, ignore
+        }
+      }
+      if (maxPrice !== "") {
+        try {
+          const maxWei = ethers.parseEther(maxPrice);
+          if (displayPrice > maxWei) return false;
+        } catch {
+          // Invalid input, ignore
+        }
+      }
+
+      // Category filter
+      if (categoryFilter !== "all") {
+        const listingCategory = listing.metadata?.category || "Other";
+        if (listingCategory !== categoryFilter) return false;
+      }
+
+      return true;
+    });
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortOption) {
+        case "newest":
+          return Number(b.createdAt - a.createdAt);
+        case "oldest":
+          return Number(a.createdAt - b.createdAt);
+        case "price-low": {
+          const priceA = a.listingType === ListingType.Auction && a.highestBid > BigInt(0) ? a.highestBid : a.price;
+          const priceB = b.listingType === ListingType.Auction && b.highestBid > BigInt(0) ? b.highestBid : b.price;
+          return Number(priceA - priceB);
+        }
+        case "price-high": {
+          const priceA = a.listingType === ListingType.Auction && a.highestBid > BigInt(0) ? a.highestBid : a.price;
+          const priceB = b.listingType === ListingType.Auction && b.highestBid > BigInt(0) ? b.highestBid : b.price;
+          return Number(priceB - priceA);
+        }
+        case "ending-soon": {
+          const now = BigInt(Math.floor(Date.now() / 1000));
+          const isActiveAuctionA = a.listingType === ListingType.Auction && a.status === ListingStatus.Active && a.endTime > now;
+          const isActiveAuctionB = b.listingType === ListingType.Auction && b.status === ListingStatus.Active && b.endTime > now;
+
+          if (isActiveAuctionA && isActiveAuctionB) return Number(a.endTime - b.endTime);
+          if (isActiveAuctionA) return -1;
+          if (isActiveAuctionB) return 1;
+          return Number(b.createdAt - a.createdAt);
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [listings, searchQuery, typeFilter, statusFilter, sortOption, minPrice, maxPrice, categoryFilter]);
+
+  const pillClass = (active: boolean) =>
+    active
+      ? "px-4 py-2 rounded-[20px] text-sm font-medium transition-colors bg-[#E07A5F] text-[#2D3142]"
+      : "px-4 py-2 rounded-[20px] text-sm font-medium transition-colors bg-[rgba(244,241,222,0.06)] text-[rgba(244,241,222,0.5)] hover:text-[rgba(244,241,222,0.7)]";
 
   return (
     <div className="min-h-screen py-12">
@@ -117,55 +216,154 @@ function ExploreContent() {
           </p>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          {/* Search */}
-          <div className="flex-1">
-            <div className="relative">
-              <svg
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search items..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input pl-12"
+        {/* Search bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
-            </div>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input pl-12"
+            />
           </div>
+        </div>
 
-          {/* Type filter */}
-          <div className="flex rounded-xl border border-[var(--border-color)] overflow-hidden">
-            {(["all", "fixed", "auction"] as FilterType[]).map((type) => (
+        {/* Category pills */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex gap-2 min-w-max pb-2">
+            <button
+              onClick={() => setCategoryFilter("all")}
+              className={pillClass(categoryFilter === "all")}
+            >
+              All
+            </button>
+            {CATEGORIES.map((cat) => (
               <button
-                key={type}
-                onClick={() => setFilter(type)}
-                className={`px-6 py-3 font-medium capitalize transition-colors ${
-                  filter === type
-                    ? "bg-[var(--accent-primary)] text-[var(--bg-primary)]"
-                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
-                }`}
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={pillClass(categoryFilter === cat)}
               >
-                {type}
+                {cat}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Results count */}
-        <p className="text-[var(--text-muted)] mb-6">
-          {filteredListings.length} item{filteredListings.length !== 1 ? "s" : ""} found
+        {/* Filter controls */}
+        <div className="flex flex-col gap-4 mb-6">
+          {/* Row 1: Type pills, Status pills, Sort dropdown */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
+            {/* Type filter */}
+            <div className="flex gap-2 flex-wrap">
+              {(
+                [
+                  ["all", "All"],
+                  ["fixed", "Fixed Price"],
+                  ["auction", "Auction"],
+                ] as [TypeFilter, string][]
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setTypeFilter(value)}
+                  className={pillClass(typeFilter === value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-6 bg-[var(--border-color)]" />
+
+            {/* Status filter */}
+            <div className="flex gap-2 flex-wrap">
+              {(
+                [
+                  ["all", "All"],
+                  ["active", "Active"],
+                  ["sold", "Sold"],
+                  ["ended", "Ended"],
+                ] as [StatusFilter, string][]
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setStatusFilter(value)}
+                  className={pillClass(statusFilter === value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-6 bg-[var(--border-color)]" />
+
+            {/* Sort dropdown */}
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as SortOption)}
+              className="bg-[rgba(244,241,222,0.06)] border border-[rgba(244,241,222,0.08)] text-[#F4F1DE] rounded-[6px] px-3 py-2 text-sm outline-none focus:border-[var(--accent-primary)] transition-colors"
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="ending-soon">Ending Soon</option>
+            </select>
+          </div>
+
+          {/* Row 2: Price range + Clear filters */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="Min ETH"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                min="0"
+                step="0.01"
+                className="bg-[rgba(244,241,222,0.06)] border border-[rgba(244,241,222,0.08)] text-[#F4F1DE] rounded-[6px] px-3 py-2 text-sm w-28 outline-none focus:border-[var(--accent-primary)] transition-colors placeholder:text-[rgba(244,241,222,0.3)]"
+              />
+              <span className="text-[var(--text-muted)] text-sm">to</span>
+              <input
+                type="number"
+                placeholder="Max ETH"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                min="0"
+                step="0.01"
+                className="bg-[rgba(244,241,222,0.06)] border border-[rgba(244,241,222,0.08)] text-[#F4F1DE] rounded-[6px] px-3 py-2 text-sm w-28 outline-none focus:border-[var(--accent-primary)] transition-colors placeholder:text-[rgba(244,241,222,0.3)]"
+              />
+            </div>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-[rgba(244,241,222,0.45)] text-sm hover:text-[var(--text-primary)] transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Result count */}
+        <p className="text-[rgba(244,241,222,0.45)] text-sm mb-6">
+          Showing {filteredListings.length} of {listings.length} listings
         </p>
 
         {/* Listings grid */}
@@ -205,12 +403,16 @@ function ExploreContent() {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold mb-2">No listings found</h3>
+            <h3 className="text-xl font-semibold mb-2">No listings match your filters</h3>
             <p className="text-[var(--text-muted)] mb-6">
-              {searchQuery
-                ? "Try adjusting your search or filters"
-                : "Be the first to list an item on the marketplace!"}
+              Try adjusting your search or filters to find what you&apos;re looking for
             </p>
+            <button
+              onClick={clearFilters}
+              className="text-[var(--accent-primary)] hover:underline font-medium"
+            >
+              Clear filters
+            </button>
           </div>
         )}
       </div>

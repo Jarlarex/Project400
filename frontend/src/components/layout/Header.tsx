@@ -2,25 +2,36 @@
 
 import Link from "next/link";
 import { useWallet } from "@/contexts/WalletContext";
+import { shortenAddress } from "@/lib/utils";
 import { useState } from "react";
 
 export function Header() {
-  const { address, isConnected, isConnecting, balance, connect, disconnect } = useWallet();
+  const { address, isConnected, isConnecting, isWrongNetwork, balance, connect, disconnect, switchNetwork } = useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const shortenAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
   return (
+    <>
+    {isWrongNetwork && (
+      <div className="bg-[var(--accent-primary)] text-[var(--bg-primary)] px-4 py-3 text-center text-sm font-medium sticky top-0 z-[60]">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 flex-wrap">
+          <span>You&apos;re connected to the wrong network. Please switch to Sepolia to use DecentraMarket.</span>
+          <button
+            onClick={() => switchNetwork(11155111)}
+            className="px-4 py-1.5 rounded-[6px] bg-[var(--bg-primary)] text-[var(--accent-primary)] font-semibold text-xs hover:opacity-90 transition-opacity"
+          >
+            Switch to Sepolia
+          </button>
+        </div>
+      </div>
+    )}
     <header className="sticky top-0 z-50 glass">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00d4aa] to-[#7c3aed] flex items-center justify-center transform group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-[6px] bg-[var(--accent-primary)] flex items-center justify-center transform group-hover:scale-110 transition-transform">
               <svg
-                className="w-6 h-6 text-[#0a0b0f]"
+                className="w-6 h-6 text-[var(--bg-primary)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -34,7 +45,7 @@ export function Header() {
               </svg>
             </div>
             <span className="text-xl font-bold hidden sm:block">
-              <span className="gradient-text">Decentra</span>
+              <span className="text-[var(--accent-primary)]">Decentra</span>
               <span className="text-[var(--text-primary)]">Market</span>
             </span>
           </Link>
@@ -67,8 +78,8 @@ export function Header() {
           <div className="flex items-center gap-4">
             {isConnected ? (
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
-                  <span className="eth-icon text-sm text-[var(--text-secondary)]">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[6px] bg-[var(--input-bg)] border border-[var(--input-border)]">
+                  <span className="eth-icon text-sm">
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 1.75l-6.25 10.5L12 16l6.25-3.75L12 1.75zM5.75 13.5L12 22.25l6.25-8.75L12 17.25 5.75 13.5z" />
                     </svg>
@@ -77,7 +88,7 @@ export function Header() {
                 </div>
                 <button
                   onClick={disconnect}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] hover:border-[var(--accent-primary)] transition-all group"
+                  className="flex items-center gap-2 px-4 py-2 rounded-[6px] bg-[var(--input-bg)] border border-[var(--input-border)] hover:border-[var(--accent-primary)] transition-all group"
                 >
                   <div className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
                   <span className="font-medium text-sm">{shortenAddress(address!)}</span>
@@ -112,7 +123,7 @@ export function Header() {
 
             {/* Mobile menu button */}
             <button
-              className="md:hidden p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+              className="md:hidden p-2 rounded-[6px] hover:bg-[var(--surface-elevated)] transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -132,14 +143,14 @@ export function Header() {
             <nav className="flex flex-col gap-2">
               <Link
                 href="/explore"
-                className="px-4 py-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-all"
+                className="px-4 py-2 rounded-[6px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] transition-all"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Explore
               </Link>
               <Link
                 href="/create"
-                className="px-4 py-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-all"
+                className="px-4 py-2 rounded-[6px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] transition-all"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Create
@@ -147,7 +158,7 @@ export function Header() {
               {isConnected && (
                 <Link
                   href="/profile"
-                  className="px-4 py-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-all"
+                  className="px-4 py-2 rounded-[6px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] transition-all"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Profile
@@ -158,5 +169,6 @@ export function Header() {
         )}
       </div>
     </header>
+    </>
   );
 }

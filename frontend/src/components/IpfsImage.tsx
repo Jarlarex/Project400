@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ipfsToHttpUrls } from "@/lib/ipfs";
 
 interface IpfsImageProps {
@@ -20,16 +21,13 @@ export function IpfsImage({ src, alt, className }: IpfsImageProps) {
 
   const handleError = () => {
     if (currentIndex < candidates.length - 1) {
-      // Try next gateway
       setCurrentIndex(currentIndex + 1);
     } else {
-      // All gateways failed
       setFailed(true);
     }
   };
 
   if (failed || !src) {
-    // Show placeholder when all gateways fail or no src
     return (
       <div className={`flex items-center justify-center bg-[var(--bg-tertiary)] ${className || ""}`}>
         <svg
@@ -50,9 +48,11 @@ export function IpfsImage({ src, alt, className }: IpfsImageProps) {
   }
 
   return (
-    <img
+    <Image
       src={candidates[currentIndex]}
       alt={alt}
+      fill
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
       className={className}
       onError={handleError}
     />

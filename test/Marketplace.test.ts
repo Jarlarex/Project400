@@ -330,6 +330,183 @@ describe("Marketplace", function () {
     });
   });
 
+  describe("Escrow System", function () {
+    it("Should initiate purchase with escrow", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+
+      await expect(
+        marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH })
+      )
+        .to.emit(marketplace, "PurchaseInitiated");
+
+      const listing = await marketplace.getListing(0);
+      expect(listing.status).to.equal(3); // InEscrow
+      expect(listing.buyer).to.equal(buyer.address);
+      expect(listing.escrowDeadline).to.be.greaterThan(0);
+    });
+
+    it("Should hold funds in contract during escrow", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+
+      const contractBalanceBefore = await ethers.provider.getBalance(await marketplace.getAddress());
+      await marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH });
+      const contractBalanceAfter = await ethers.provider.getBalance(await marketplace.getAddress());
+
+      expect(contractBalanceAfter - contractBalanceBefore).to.equal(ONE_ETH);
+    });
+
+    it("Should allow buyer to confirm delivery and release funds", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+      await marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH });
+
+      const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+
+      await expect(
+        marketplace.connect(buyer).confirmDelivery(0)
+      )
+        .to.emit(marketplace, "DeliveryConfirmed")
+        .withArgs(0, buyer.address, seller.address, ONE_ETH);
+
+      const listing = await marketplace.getListing(0);
+      expect(listing.status).to.equal(1); // Sold
+
+      // Seller receives payment minus platform fee
+      const expectedPayment = ONE_ETH - (ONE_ETH * BigInt(PLATFORM_FEE)) / BigInt(10000);
+      const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+      expect(sellerBalanceAfter - sellerBalanceBefore).to.equal(expectedPayment);
+    });
+
+    it("Should allow seller to release escrow after deadline", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+      await marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH });
+
+      // Fast forward past the 14-day escrow period
+      await time.increase(14 * ONE_DAY + 1);
+
+      const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+
+      await expect(
+        marketplace.connect(seller).releaseEscrow(0)
+      )
+        .to.emit(marketplace, "EscrowReleased")
+        .withArgs(0, seller.address, ONE_ETH);
+
+      const listing = await marketplace.getListing(0);
+      expect(listing.status).to.equal(1); // Sold
+
+      const expectedPayment = ONE_ETH - (ONE_ETH * BigInt(PLATFORM_FEE)) / BigInt(10000);
+      const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+      // Account for gas cost
+      const diff = sellerBalanceAfter - sellerBalanceBefore;
+      expect(diff).to.be.lessThanOrEqual(expectedPayment);
+      expect(diff).to.be.greaterThan(expectedPayment - ethers.parseEther("0.01")); // within gas tolerance
+    });
+
+    it("Should reject confirmDelivery from non-buyer", async function () {
+      const { marketplace, seller, buyer, bidder1 } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+      await marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH });
+
+      await expect(
+        marketplace.connect(bidder1).confirmDelivery(0)
+      ).to.be.revertedWith("Only buyer can confirm");
+    });
+
+    it("Should reject confirmDelivery when not in escrow", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+
+      await expect(
+        marketplace.connect(buyer).confirmDelivery(0)
+      ).to.be.revertedWith("Not in escrow");
+    });
+
+    it("Should reject releaseEscrow before deadline", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+      await marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH });
+
+      await expect(
+        marketplace.connect(seller).releaseEscrow(0)
+      ).to.be.revertedWith("Escrow period not ended");
+    });
+
+    it("Should reject releaseEscrow from non-seller", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+      await marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH });
+
+      await time.increase(14 * ONE_DAY + 1);
+
+      await expect(
+        marketplace.connect(buyer).releaseEscrow(0)
+      ).to.be.revertedWith("Only seller can release");
+    });
+
+    it("Should reject initiatePurchase on auction listing", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, true, ONE_DAY);
+
+      await expect(
+        marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH })
+      ).to.be.revertedWith("Not a fixed price listing");
+    });
+
+    it("Should remove listing from active listings when escrowed", async function () {
+      const { marketplace, seller, buyer } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, false, 0);
+
+      let activeListings = await marketplace.getActiveListings();
+      expect(activeListings.length).to.equal(1);
+
+      await marketplace.connect(buyer).initiatePurchase(0, { value: ONE_ETH });
+
+      activeListings = await marketplace.getActiveListings();
+      expect(activeListings.length).to.equal(0);
+    });
+  });
+
+  describe("Bid Withdrawal", function () {
+    it("Should allow outbid user to withdraw funds", async function () {
+      const { marketplace, seller, bidder1, bidder2 } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, true, ONE_DAY);
+      await marketplace.connect(bidder1).placeBid(0, { value: ONE_ETH });
+
+      // bidder2 outbids
+      await marketplace.connect(bidder2).placeBid(0, { value: ethers.parseEther("2") });
+
+      // Check pending return
+      const pendingReturn = await marketplace.getPendingReturn(0, bidder1.address);
+      expect(pendingReturn).to.equal(ONE_ETH);
+
+      // Withdraw
+      const balanceBefore = await ethers.provider.getBalance(bidder1.address);
+      const tx = await marketplace.connect(bidder1).withdrawBid(0);
+      const receipt = await tx.wait();
+      const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
+
+      const balanceAfter = await ethers.provider.getBalance(bidder1.address);
+      expect(balanceAfter - balanceBefore + gasUsed).to.equal(ONE_ETH);
+
+      // Pending return should be 0 after withdrawal
+      const pendingAfter = await marketplace.getPendingReturn(0, bidder1.address);
+      expect(pendingAfter).to.equal(0);
+    });
+
+    it("Should reject withdrawal when no pending return exists", async function () {
+      const { marketplace, seller, bidder1 } = await loadFixture(deployMarketplaceFixture);
+      await marketplace.connect(seller).createListing(METADATA_URI, ONE_ETH, true, ONE_DAY);
+
+      await expect(
+        marketplace.connect(bidder1).withdrawBid(0)
+      ).to.be.revertedWith("No funds to withdraw");
+    });
+  });
+
   describe("Platform Fee Management", function () {
     it("Should allow owner to update fee", async function () {
       const { marketplace, owner } = await loadFixture(deployMarketplaceFixture);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ListingWithMetadata, ListingType, ListingStatus, formatPrice, getTimeRemaining } from "@/hooks/useMarketplace";
 import { IpfsImage } from "@/components/IpfsImage";
+import { shortenAddress } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
 interface ListingCardProps {
@@ -29,11 +30,6 @@ export function ListingCard({ listing }: ListingCardProps) {
   const isActive = listing.status === ListingStatus.Active;
   const displayPrice = isAuction && listing.highestBid && listing.highestBid > 0 ? listing.highestBid : listing.price || BigInt(0);
 
-  const shortenAddress = (addr?: string) => {
-    if (!addr) return "Unknown";
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
-
   return (
     <Link href={`/listing/${listing.id?.toString() ?? '0'}`}>
       <div className="card overflow-hidden group cursor-pointer">
@@ -52,7 +48,7 @@ export function ListingCard({ listing }: ListingCardProps) {
               {isAuction ? "Auction" : "Fixed"}
             </span>
             {listing.status === ListingStatus.InEscrow && (
-              <span className="badge bg-orange-500 text-white animate-pulse">In Escrow</span>
+              <span className="badge bg-[var(--accent-primary)] text-[var(--bg-primary)] animate-pulse">In Escrow</span>
             )}
             {listing.status === ListingStatus.Sold && (
               <span className="badge badge-sold">Sold</span>
@@ -78,9 +74,12 @@ export function ListingCard({ listing }: ListingCardProps) {
             {listing.metadata?.name || `Item #${listing.id?.toString() ?? 'Unknown'}`}
           </h3>
           
-          <p className="text-sm text-[var(--text-muted)] mb-3 truncate">
+          <p className="text-sm text-[var(--text-muted)] mb-1 truncate">
             by {shortenAddress(listing.seller)}
           </p>
+          {listing.metadata?.category && (
+            <p className="text-xs text-[rgba(244,241,222,0.45)] mb-3">{listing.metadata.category}</p>
+          )}
 
           <div className="flex items-center justify-between">
             <div>
@@ -98,7 +97,7 @@ export function ListingCard({ listing }: ListingCardProps) {
             {isAuction && listing.highestBid && listing.highestBid > 0 && (
               <div className="text-right">
                 <p className="text-xs text-[var(--text-muted)] mb-1">Bids</p>
-                <p className="text-sm font-medium text-[var(--accent-secondary)]">
+                <p className="text-sm font-medium text-[var(--accent-primary)]">
                   {listing.highestBidder && listing.highestBidder !== "0x0000000000000000000000000000000000000000" ? "1+" : "0"}
                 </p>
               </div>
